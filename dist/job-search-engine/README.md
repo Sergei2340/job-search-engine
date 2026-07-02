@@ -18,6 +18,10 @@ setup and stays in your own working folder — this plugin ships no private data
   scheduled task the wizard creates.
 - **troubleshoot-pipeline** — say "pipeline didn't run" / "no leads today" /
   "sheet write blocked".
+- **research-job-boards** — say "research job boards for `<role>`". Finds and
+  live-verifies boards worth adding for a role, and reports each board's
+  integration path (query tweak, RSS, API, vendor) without touching your
+  config.
 
 ## How it works (two phases, daily)
 

@@ -12,3 +12,9 @@ profiles/*/reports/
 __pycache__/
 *.pyc
 .venv/
+
+# Build artifacts
+job-search-engine.plugin
+
+# Machine-local Claude Code settings
+.claude/

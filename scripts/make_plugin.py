@@ -71,7 +71,7 @@ def stage(staging: Path) -> None:
     body = (REPO / "engine/SKILL.md").read_text(encoding="utf-8")
     out = staging / "skills/run-pipeline/SKILL.md"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(front.rstrip() + "\n\n" + body, encoding="utf-8")
+    out.write_text(front.rstrip() + "\n\n" + body, encoding="utf-8", newline="\n")
 
     # 3) Assets: engine code (no pycache), scripts, template profile, tests.
     for src in (REPO / "engine").rglob("*"):
@@ -88,7 +88,9 @@ def stage(staging: Path) -> None:
     _copy(REPO / "plugin/assets-extra/README.md", staging / "assets/README.md")
 
     version = json.loads((REPO / "plugin/.claude-plugin/plugin.json").read_text())["version"]
-    (staging / "assets/ENGINE_VERSION").write_text(f"{version} ({date.today().isoformat()})\n")
+    (staging / "assets/ENGINE_VERSION").write_text(
+        f"{version} ({date.today().isoformat()})\n", encoding="utf-8", newline="\n"
+    )
 
 
 def privacy_guard(staging: Path) -> list[str]:
