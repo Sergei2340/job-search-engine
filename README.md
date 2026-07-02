@@ -1,71 +1,74 @@
-# job-search-engine — лидоген по вакансиям для любого отдела Innowise
+# job-search-engine — job-posting lead generation for any Innowise department
 
-Ежедневный пайплайн: собирает свежие вакансии, скорит их по рубрике отдела и
-пишет лиды в Google Sheet отдела. Логика (источники, фильтры, дедуп, запись в
-лист) общая и живёт в `engine/`.
+A daily pipeline: collects fresh job postings, scores them against the
+department's rubric, and writes leads to the department's Google Sheet. The
+logic (sources, filters, dedup, sheet writes) is shared and lives in `engine/`.
 
-Этот репозиторий — исходники движка и Cowork-плагина, без боевых данных:
-инстанс каждого отдела (профиль, секреты, state) живёт в собственной рабочей
-папке, которую разворачивает визард плагина.
+This repository holds the engine and Cowork-plugin sources, with no production
+data: each department's instance (profile, secrets, state) lives in its own
+working folder, scaffolded by the plugin's setup wizard.
 
-## Архитектура (две фазы, на отдел)
+## Architecture (two phases, per department)
 
-**Phase 1 — `engine/main.py` (Python, Windows Task Scheduler, раз в день).**
-Читает `profiles/<dept>/profile.yaml`, параллельно тянет включённые источники
+**Phase 1 — `engine/main.py` (Python, Windows Task Scheduler, once a day).**
+Reads `profiles/<dept>/profile.yaml`, pulls the enabled sources in parallel
 (SerpAPI/Google Jobs, LinkedIn via Bright Data, WeWorkRemotely RSS, RemoteOK),
-гоняет каждую вакансию через гейт релевантности профиля, применяет механические
-фильтры (прямая ссылка, blocked domains, URL-дедуп, role-дедуп, свежесть,
-fair cap) и пишет `profiles/<dept>/candidates.json`. В лист не пишет ничего.
+runs every posting through the profile's relevance gate, applies mechanical
+filters (direct link, blocked domains, URL dedup, role dedup, freshness,
+fair cap) and writes `profiles/<dept>/candidates.json`. Writes nothing to the
+sheet.
 
-**Phase 2 — Claude in Cowork (`engine/SKILL.md`).** Scheduled task
-отдела называет профиль; SKILL читает `profile.yaml` (лист, префикс id) и
-`rubric.md` (правила скоринга 1–5 этого отдела), скорит кандидатов и пишет
-строки `score ≥ 2` в Google Sheet отдела. State-инварианты (seen_urls,
-role_seen, write_queue) — в SKILL.
+**Phase 2 — Claude in Cowork (`engine/SKILL.md`).** The department's scheduled
+task names the profile; the SKILL reads `profile.yaml` (sheet, id prefix) and
+`rubric.md` (this department's 1–5 scoring rules), scores the candidates and
+writes `score ≥ 2` rows to the department's Google Sheet. State invariants
+(seen_urls, role_seen, write_queue) live in the SKILL.
 
-## Что где лежит
+## Layout
 
 ```
-engine/                 общая логика — единственное место, где живёт код
-  main.py               оркестрация Phase 1 (фильтры, cap, отчёт)
-  profile.py            загрузка/валидация profile.yaml + engine-дефолты
-  relevance.py          конфиго-управляемый гейт (deny/disambiguate/allow/weak)
-  sources/              коннекторы источников (механика; ручки — в профиле)
-  SKILL.md              Phase 2 (скоринг + запись в лист)
-  run_fetch.ps1         раннер Task Scheduler: -ProfileName <dept>
-profiles/_template/     заготовка профиля отдела (уходит в плагин)
-scripts/                get_oauth_token.py (OAuth для листа), make_plugin.py (сборка плагина)
-plugin/                 исходники Cowork-плагина (скиллы, манифест, README рабочей папки)
-tests/                  фильтры + offline e2e (уходят в плагин)
+engine/                 shared logic — the only place code lives
+  main.py               Phase 1 orchestration (filters, cap, report)
+  profile.py            profile.yaml loading/validation + engine defaults
+  relevance.py          config-driven gate (deny/disambiguate/allow/weak)
+  sources/              source connectors (mechanics; knobs live in the profile)
+  SKILL.md              Phase 2 (scoring + sheet write)
+  run_fetch.ps1         Task Scheduler runner: -ProfileName <dept>
+profiles/_template/     department profile template (ships in the plugin)
+scripts/                get_oauth_token.py (sheet OAuth), make_plugin.py (plugin build)
+plugin/                 Cowork plugin sources (skills, manifest, working-folder README)
+tests/                  filters + offline e2e (ship in the plugin)
 ```
 
-Структура рабочей папки отдела (копия `engine/` + `profiles/<dept>/` с
-конфигом, секретами и state) описана в `plugin/assets-extra/README.md`.
+The department working-folder structure (a copy of `engine/` plus
+`profiles/<dept>/` with config, secrets and state) is described in
+`plugin/assets-extra/README.md`.
 
-## Разработка
+## Development
 
 ```powershell
 cd job-search-engine
 python -m pip install -r requirements.txt
-python -m tests.test_triage_filters             # фильтры
-python -m tests.test_e2e_offline                # e2e без сети
-python scripts\make_plugin.py                   # сборка job-search-engine.plugin
+python -m tests.test_triage_filters             # filters
+python -m tests.test_e2e_offline                # e2e, no network
+python scripts\make_plugin.py                   # builds job-search-engine.plugin
 ```
 
-Ручной запуск Phase 1 делается в рабочей папке отдела:
+Manual Phase 1 runs happen in the department's working folder:
 `python -m engine.main --profile <dept>`.
 
-## Инварианты (не ломать)
+## Invariants (do not break)
 
-- Один scheduled task = один профиль = один лист + один state-каталог. Общего
-  state между отделами нет — пересечения ролей (Fullstack↔Node↔Python) дали бы
-  ложные дедупы.
-- `id_prefix` уникален на отдел; id никогда не переиспользуются (в т.ч. после
-  ручного удаления строк — брать `max(sheet, queue)+1`).
-- У каждого отдела СВОЙ `SERPAPI_KEY` (бюджет 250 req/мес ≈ 8 запросов/день).
-  `BRIGHTDATA_API_KEY` и Google-аккаунт общие → расписания отделов разнесены
-  на час (07:00, 08:00, 09:00, …).
-- `_norm_role_part` в `engine/main.py` и правило №3 инвариантов Step 4 в
-  `engine/SKILL.md` должны совпадать байт-в-байт по семантике.
-- Правки логики — только в `engine/`; правки скоупа отдела — только в его
+- One scheduled task = one profile = one sheet + one state dir. No state is
+  shared between departments — overlapping roles (Fullstack↔Node↔Python)
+  would produce false dedups.
+- `id_prefix` is unique per department; ids are never reused (including after
+  manual row deletion — take `max(sheet, queue)+1`).
+- Every department has its OWN `SERPAPI_KEY` (a 250 req/month budget ≈ 8
+  queries/day). `BRIGHTDATA_API_KEY` and the Google account are shared → the
+  departments' schedules are staggered a full hour apart (07:00, 08:00,
+  09:00, …).
+- `_norm_role_part` in `engine/main.py` and invariants rule #3 of Step 4 in
+  `engine/SKILL.md` must match byte-for-byte in semantics.
+- Logic changes go only to `engine/`; department-scope changes go only to its
   `profiles/<dept>/`.
