@@ -18,6 +18,7 @@ profiles/<dept>/        YOUR department (created by the wizard)
   candidates.json       latest fetch output (overwritten daily)
   reports/, logs/       Phase 2 reports, Phase 1 logs
 tests/                  offline tests: gate parity, filters, e2e
+research/               job-board research reports (research-job-boards skill; safe to share)
 ```
 
 Daily flow: Task Scheduler `HH:00` → `engine/run_fetch.ps1 -ProfileName <dept>`
