@@ -55,7 +55,7 @@ class Posting:
     """Normalized job posting, one per listing."""
     title: str
     company: str
-    board: str              # "GoogleJobs" / "WeWorkRemotely" / "LinkedIn" / ...
+    board: str              # "GoogleJobs" / "Indeed" / "LinkedIn"
     location: str           # city/country or "Remote"
     remote_type: str        # "Remote" / "Hybrid" / "On-site" / "Unknown"
     salary: str             # raw string; "Not listed" if absent

@@ -60,7 +60,7 @@ report. Then read `candidates.json` and `last_run_report.json` (same folder).
 ```json
 {
   "id": "<sha1(link)[:12]>",
-  "board": "GoogleJobs|Indeed|LinkedIn|WeWorkRemotely|RemoteOK",
+  "board": "GoogleJobs|Indeed|LinkedIn",
   "link": "<canonical URL>",
   "title_guess": "<source-extracted title>",
   "company_guess": "<source-extracted company; may be empty>",

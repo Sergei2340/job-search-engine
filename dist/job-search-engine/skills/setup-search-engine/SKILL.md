@@ -12,8 +12,8 @@ run — setup is complete only when the DONE criteria at the end are all met.
 
 The pipeline (two phases, per department):
 - **Phase 1 (their machine, daily, Task Scheduler):** Python fetches job
-  postings from SerpAPI/Google Jobs, LinkedIn (Bright Data), WeWorkRemotely,
-  RemoteOK; mechanical filters + a role-relevance gate produce `candidates.json`.
+  postings from SerpAPI/Google Jobs and LinkedIn (Bright Data); mechanical
+  filters + a role-relevance gate produce `candidates.json`.
 - **Phase 2 (Cowork scheduled task, ~30 min later):** Claude scores candidates
   1–5 against the department rubric and writes rows to their Google Sheet
   (see the `run-pipeline` skill).
@@ -94,8 +94,7 @@ Follow `references/services-setup.md` with the user, collecting into
 
 1. From the interview, fill `profiles/<dept>/profile.yaml` (start from the
    template): queries for SerpAPI (≤ 8/day), LinkedIn inputs (keyword × geo,
-   lean — billed per record), WeWorkRemotely category feed and RemoteOK tag if
-   a fitting one exists (else `enabled: false`), caps, schedule, alert email.
+   lean — billed per record), caps, schedule, alert email.
 2. **Draft the relevance gate** (`relevance_gate` in profile.yaml):
    deny/disambiguate/allow/weak regex lists from the interview answers. Show
    the user a plain-language summary of what will be dropped vs passed and

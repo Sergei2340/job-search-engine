@@ -52,11 +52,11 @@ if __package__ in (None, ""):  # `python engine/main.py` fallback
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from engine.profile import Profile, load_profile  # noqa: E402
     from engine.sources import Posting, canonical_url  # noqa: E402
-    from engine.sources import serpapi_jobs, linkedin_brightdata, weworkremotely, remoteok  # noqa: E402
+    from engine.sources import serpapi_jobs, linkedin_brightdata  # noqa: E402
 else:
     from .profile import Profile, load_profile
     from .sources import Posting, canonical_url
-    from .sources import serpapi_jobs, linkedin_brightdata, weworkremotely, remoteok
+    from .sources import serpapi_jobs, linkedin_brightdata
 
 log = logging.getLogger("job-search-engine")
 
@@ -66,8 +66,6 @@ log = logging.getLogger("job-search-engine")
 SOURCE_REGISTRY = {
     "serpapi": serpapi_jobs.fetch,                  # Google Jobs aggregate
     "linkedin_brightdata": linkedin_brightdata.fetch,  # LinkedIn via Bright Data (async, 1x/day)
-    "weworkremotely": weworkremotely.fetch,         # per-category RSS (remote-only)
-    "remoteok": remoteok.fetch,                     # ?tag=<tag> JSON API (remote-only)
 }
 
 

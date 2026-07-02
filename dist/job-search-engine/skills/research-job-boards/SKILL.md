@@ -37,8 +37,8 @@ Search in several passes and collect every plausible board:
 - community mentions for the niche (Reddit, HN, awesome-lists)
 - the usual remote set (Remotive, Himalayas, Wellfound, ...) — same
   verification bar as everyone else, no free passes for famous names.
-Skip boards already enabled in the profile (serpapi / linkedin_brightdata /
-weworkremotely / remoteok) — list them in the report as "already connected".
+Skip boards already enabled in the profile (serpapi / linkedin_brightdata) —
+list them in the report as "already connected".
 
 ## Step 2 — Live verification (every candidate)
 
@@ -73,10 +73,12 @@ Step 1, verify the 15 most promising and list the rest in the report as
   "confirm with one google_jobs test query before adopting". Zero code; mind
   the SerpAPI budget (250 req/month ≈ 8 queries/day TOTAL, existing queries
   included).
-- **B — RSS feed** (model: `engine/sources/weworkremotely.py`): cheapest
-  engine addition. Record the exact feed URL for each relevant category.
-- **C — public JSON API** (model: `engine/sources/remoteok.py`): small new
-  connector. Record endpoint, auth requirements, rate limits.
+- **B — RSS feed**: cheapest engine addition — a new
+  `fetch(profile) -> list[Posting]` connector that parses a category feed
+  (model: the `Posting` / `fetch` contract in `engine/sources/__init__.py`).
+  Record the exact feed URL for each relevant category.
+- **C — public JSON API**: small new connector on the same contract. Record
+  endpoint, auth requirements, rate limits.
 - **D — dataset/scraping vendor** (model:
   `engine/sources/linkedin_brightdata.py`): per-record cost decision; name
   the vendor and pricing model if visible.
