@@ -1,7 +1,7 @@
 {
   "name": "job-search-engine",
   "version": "0.3.0",
-  "description": "Department-agnostic jobs lead-generation pipeline: daily fetch of fresh job postings (SerpAPI/Google Jobs, LinkedIn via Bright Data), LLM scoring against a per-department rubric, and writes to the department's Google Sheet. Includes an end-to-end setup wizard, the daily run skill, and troubleshooting.",
+  "description": "Department-agnostic jobs lead-generation pipeline: daily fetch of fresh job postings (SerpAPI/Google Jobs, LinkedIn via Bright Data), LLM scoring against a per-department rubric, and writes to the department's Google Sheet. Includes an end-to-end setup wizard, the daily run skill, troubleshooting, and a job-board research skill.",
   "author": {
     "name": "Innowise"
   },

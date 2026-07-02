@@ -1,6 +1,6 @@
 ---
 name: research-job-boards
-description: Research which job boards are worth adding as pipeline sources for a role (asks for the role if none is named). Use when the user says "research job boards for a role", "find job boards for QA engineers", "which boards should we add", "find more job sources", "where else can we search for jobs", "найди джоб-борды для роли", "какие борды подойдут для дизайнеров", "какие ещё борды добавить", "надо расширить источники", or wants to expand where the jobs pipeline searches. Live-verifies every candidate board and reports an integration path per board. Research and report only — it recommends changes but does not edit profile.yaml.
+description: Research which job boards are worth adding as pipeline sources for a role (asks for the role if none is named). Use when the user says "research job boards for a role", "find job boards for QA engineers", "which boards should we add", "find more job sources", "where else can we search for jobs", "найди джоб-борды для роли", "какие борды подойдут для дизайнеров", "какие ещё борды добавить", "надо расширить источники", or wants to expand where the jobs pipeline searches. Live-verifies candidate boards (the ~15 most promising; the rest are listed unverified) and reports an integration path per board. Research and report only — it recommends changes but does not edit profile.yaml.
 ---
 
 # job-search-engine — job-board research
@@ -49,8 +49,10 @@ Step 1, verify the 15 most promising and list the rest in the report as
 "collected, not verified".
 1. **Fresh volume**: search the board for the role; estimate postings from
    the last 7 days from the first results page (mark it approximate). Almost
-   none → verdict "weak". Note missing/unreliable posting dates (Phase 1
-   marks such domains `date_suspect`; the rubric scores them down).
+   none → verdict "weak". Note missing/unreliable posting dates — recommend
+   adding such domains to `filters.extra_unreliable_date_domains`: Phase 1
+   marks `date_suspect` only for domains on that curated list (the rubric
+   then scores them down); a new board is never flagged automatically.
 2. **Link quality**: open 1–2 postings; is there a stable per-posting URL?
    Phase 1 only drops bare-domain/root links (`_is_search_or_root` in
    `engine/main.py`) — list pages WITH a path slip through to the sheet, so
@@ -108,5 +110,8 @@ role names transliterated (e.g. senior-react-developer); `date` = today as
    `sources.serpapi.queries` or broaden the role. Still write the report.
 
 No secrets or per-department private data in the report — it must be safe to
-share outside the department. In chat, give the top 3–5 boards with one-line
-reasons and the path breakdown; point to the report file for the rest.
+share outside the department. Concretely: no `spreadsheet_id`, sheet name or
+tab, `alert_email`, schedule hours, or API-key/budget state (a generic "2 of
+8 daily query slots free" is fine); recommended query strings (path A) are
+shareable by design. In chat, give the top 3–5 boards with one-line reasons
+and the path breakdown; point to the report file for the rest.
