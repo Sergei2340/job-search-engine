@@ -1,0 +1,14 @@
+# Secrets & runtime state — per profile
+profiles/*/.env
+profiles/*/oauth_client.json
+profiles/*/oauth_token.json
+profiles/*/state/
+profiles/*/candidates.json
+profiles/*/last_run_report.json
+profiles/*/logs/
+profiles/*/reports/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

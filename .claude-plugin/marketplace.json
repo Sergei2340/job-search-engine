@@ -1,0 +1,13 @@
+{
+  "name": "innowise-plugins",
+  "owner": {
+    "name": "Innowise"
+  },
+  "plugins": [
+    {
+      "name": "job-search-engine",
+      "source": "./dist/job-search-engine",
+      "description": "Department-agnostic jobs lead-generation pipeline: daily fetch of fresh job postings, LLM scoring against a per-department rubric, and writes to the department's Google Sheet."
+    }
+  ]
+}
