@@ -15,3 +15,6 @@ __pycache__/
 
 # Build artifacts
 job-search-engine.plugin
+
+# Machine-local Claude Code settings
+.claude/
