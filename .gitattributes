@@ -1,0 +1,9 @@
+# Force LF for all text files, on every machine regardless of core.autocrlf.
+# Motivation (PR #1 follow-up): scripts/make_plugin.py copies working-tree
+# bytes into dist/ verbatim (shutil.copy2), so a contributor checkout with
+# autocrlf=true would materialize CRLF files and leak them into the shipped
+# plugin — the same defect class PR #1 fixed for builder-written files.
+* text=auto eol=lf
+
+# Build artifact is a zip (gitignored, but guard against future tracking).
+*.plugin binary
