@@ -35,9 +35,6 @@ Check `source_counts` in `last_run_report.json`.
   (b) snapshot poll timeout (log line "not ready after 900s") — rare; if
   chronic, the profile's `inputs` list is too big or Bright Data is slow that
   day; (c) missing key / dataset not subscribed — log says which.
-- **weworkremotely / remoteok = 0**: category feed URL or tag may not exist
-  for this domain — verify the URL in a browser; disable the source in
-  profile.yaml if the board simply has no such category.
 
 ## Candidates fetched but kept ≈ 0
 

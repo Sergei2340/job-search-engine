@@ -16,7 +16,7 @@ ID	Date Found	Title	Company	Board	Region	Remote	Salary/Rate	Risk flags	Link	Comm
 | B | Date Found | pipeline | `YYYY-MM-DD HH:MM` |
 | C | Title | pipeline | canonical role title |
 | D | Company | pipeline | never blank (`Unknown` as last resort) |
-| E | Board | pipeline | GoogleJobs / Indeed / LinkedIn / WeWorkRemotely / RemoteOK |
+| E | Board | pipeline | GoogleJobs / Indeed / LinkedIn |
 | F | Region | pipeline | `Country, City` format |
 | G | Remote | pipeline | Remote / Hybrid / On-site / Unknown |
 | H | Salary/Rate | pipeline | never blank — `Not listed` if absent |

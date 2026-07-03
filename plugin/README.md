@@ -26,9 +26,8 @@ setup and stays in your own working folder — this plugin ships no private data
 ## How it works (two phases, daily)
 
 1. **Fetch (your machine, Task Scheduler / cron):** Python collects postings
-   from SerpAPI (Google Jobs), LinkedIn (Bright Data dataset), WeWorkRemotely,
-   RemoteOK; applies dedup/freshness/relevance filters; writes
-   `candidates.json`.
+   from SerpAPI (Google Jobs) and LinkedIn (Bright Data dataset); applies
+   dedup/freshness/relevance filters; writes `candidates.json`.
 2. **Score + write (Claude, ~30 min later):** candidates are scored against
    your department rubric; kept rows land in your Google Sheet with lead ids,
    risk flags, and reasons. Columns K/L stay manual for your specialists'

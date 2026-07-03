@@ -46,15 +46,6 @@ sources:
       - {keyword: "<Role>", location: "United States", country: "US"}
       - {keyword: "<Role>", location: "United Kingdom", country: "GB"}
 
-  weworkremotely:
-    enabled: true
-    # Pick the category feed: https://weworkremotely.com/remote-job-categories
-    feed_url: "https://weworkremotely.com/categories/<category>.rss"  # e.g. remote-back-end-programming-jobs
-
-  remoteok:
-    enabled: true
-    tag: "<tag>"                    # e.g. python — see https://remoteok.com/api
-
 filters:
   # Companies that must never be a lead (e.g. a platform vendor whose own
   # postings shouldn't become leads; most departments leave this empty).

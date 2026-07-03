@@ -12,7 +12,7 @@ working folder, scaffolded by the plugin's setup wizard.
 
 **Phase 1 — `engine/main.py` (Python, Windows Task Scheduler, once a day).**
 Reads `profiles/<dept>/profile.yaml`, pulls the enabled sources in parallel
-(SerpAPI/Google Jobs, LinkedIn via Bright Data, WeWorkRemotely RSS, RemoteOK),
+(SerpAPI/Google Jobs, LinkedIn via Bright Data),
 runs every posting through the profile's relevance gate, applies mechanical
 filters (direct link, blocked domains, URL dedup, role dedup, freshness,
 fair cap) and writes `profiles/<dept>/candidates.json`. Writes nothing to the
