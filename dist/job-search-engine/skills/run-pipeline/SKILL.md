@@ -299,4 +299,5 @@ it is how the pipeline owner tunes the threshold.
 - **ID (A) is `{id_prefix}-NNNN` — never reuse a value.** Re-read column A at
   batch start.
 - **Columns K and L are manual — never write to them.**
-- **When uncertain about a qualifying
+- **When uncertain about a qualifying attribute, score 2 or 3 rather than 1**
+  — recall over precision (see the rubric's explicit bias instruction).

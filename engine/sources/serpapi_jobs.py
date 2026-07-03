@@ -190,4 +190,4 @@ def fetch(profile, max_per_query: int = 30) -> list[Posting]:
         log.info("SerpAPI: q=%r location=%r raw=%d kept=%d",
                  qdef["q"], qdef.get("location"), len(jobs), kept_this_query)
     log.info("SerpAPI: %d postings across %d queries", len(out), len(queries))
- 
+    return out
