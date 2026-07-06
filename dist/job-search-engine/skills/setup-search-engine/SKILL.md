@@ -166,6 +166,9 @@ Per `references/scheduling.md`:
 - `.env`, `oauth_*.json` in place; nothing secret echoed to chat.
 
 Close with the calibration note: watch the score histogram in daily reports
-for the first week; collect specialist feedback in column K; feed dead/paywall
-domains into `state/blocked_domains.json` and conversion-killing patterns back
-into the rubric. For problems, point them to the `troubleshoot-pipeline` skill.
+for the first week and collect specialist feedback in column K. To understand
+how the sorting works or to change it — loosen/tighten the gate, tune the
+rubric, feed dead/paywall domains into `state/blocked_domains.json`, exclude a
+company — use the `triage-calibration` skill (it decomposes the funnel and walks
+each change through a diff → backtest → backup → log → rollback pipeline). For a
+broken or failed run, point them to the `troubleshoot-pipeline` skill.

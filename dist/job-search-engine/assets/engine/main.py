@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -59,6 +60,24 @@ else:
     from .sources import serpapi_jobs, linkedin_brightdata
 
 log = logging.getLogger("job-search-engine")
+
+
+def atomic_write_json(path: Path, obj) -> None:
+    """Write JSON atomically: temp file in the same dir, fsync, os.replace.
+
+    Hardening ported from the uiux pipeline 2026-07-06: its Phase 2 found
+    candidates.json with a second stale array concatenated after the fresh one
+    ("Extra data" on json.loads). A plain write_text() leaves a window where
+    readers/sync layers can observe a partially rewritten file; os.replace
+    guarantees readers only ever see one complete document.
+    """
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(obj, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
 
 # Registry of available source connectors. A profile enables a subset via
 # `sources.<name>.enabled` and supplies per-source config. Every fetch takes
@@ -389,7 +408,7 @@ def run(profile: Profile, max_age_hours: int | None = None,
 
     candidates = [p.to_candidate(now) for p in kept]
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(candidates, indent=2))
+    atomic_write_json(out, candidates)
     log.info("[%s] Wrote %d candidates to %s", profile.dept, len(candidates), out)
 
     report = {
@@ -405,7 +424,7 @@ def run(profile: Profile, max_age_hours: int | None = None,
         "capped_out_counts": capped_out_counts,
         "candidates_file": str(out),
     }
-    report_out.write_text(json.dumps(report, indent=2))
+    atomic_write_json(report_out, report)
     log.info("[%s] Wrote run report to %s", profile.dept, report_out)
     return report
 
