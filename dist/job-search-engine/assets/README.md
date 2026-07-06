@@ -30,7 +30,7 @@ Manual run: `python -m engine.main --profile <dept>` · Tests:
 `test_serpapi_fetch_returns_list`.
 
 Rules that keep the data sane: never reuse a lead id; never write sheet
-columns K/L (specialists' feedback lives there); state files are whole-file
+columns L/M (specialists' feedback lives there); state files are whole-file
 JSON rewrites, never appends; one profile = one sheet = one state dir.
 
 Problems? Ask Claude to run the plugin's `troubleshoot-pipeline` skill.

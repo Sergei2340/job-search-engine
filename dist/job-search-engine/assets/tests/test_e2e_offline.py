@@ -119,8 +119,13 @@ class EndToEndOffline(unittest.TestCase):
             for c in candidates:
                 for key in ("id", "board", "link", "title_guess", "company_guess",
                             "date_found_iso", "date_posted_iso", "raw_type",
-                            "raw_content", "date_suspect"):
+                            "raw_content", "company_size", "date_suspect"):
                     self.assertIn(key, c)
+                # No company_url on the fake postings -> enrichment leaves null.
+                self.assertIsNone(c["company_size"])
+
+            # Enrichment ran (and self-skipped: no enrichment block in profile).
+            self.assertIn("company_enrichment", report)
 
             saved_report = json.loads(profile.report_file.read_text())
             self.assertEqual(saved_report["candidate_count"], 2)

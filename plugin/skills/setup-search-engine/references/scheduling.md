@@ -2,8 +2,8 @@
 
 ## Slot rules
 
-- Phase 1 at `HH:00`, Phase 2 at `HH:30` (LinkedIn snapshots can take up to
-  15 min to build; 30 min is safe).
+- Phase 1 at `HH:00`, Phase 2 at `HH:30` (LinkedIn snapshot + company-size
+  enrichment can take up to ~20 min to build; 30 min is safe).
 - If ANY other job-search pipeline runs on the same machine or shares an API
   key / Google account, keep a FULL HOUR between pipelines (e.g. 07:00, 08:00,
   09:00 …). Ask; don't assume.

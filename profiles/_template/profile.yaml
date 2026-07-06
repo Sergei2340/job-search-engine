@@ -14,7 +14,7 @@ id_prefix: <PREFIX>
 sheet:
   name: "<Sheet title>"           # e.g. "Python Jobs Automated Search"
   spreadsheet_id: "<spreadsheet id from the sheet URL>"
-  tab: "Sheet1"                   # header in row 1, data from row 2, columns A-P
+  tab: "Sheet1"                   # header in row 1, data from row 2, columns A-Q
 
 alert_email: "<who gets the blocked-write alert>"
 
@@ -46,6 +46,23 @@ sources:
     inputs:                          # keyword x geo pairs; keep lean (cost lever)
       - {keyword: "<Role>", location: "United States", country: "US"}
       - {keyword: "<Role>", location: "United Kingdom", country: "GB"}
+
+# Phase-1 enrichment: augments already-kept candidates (NOT a fetch source, so
+# it lives here and not under `sources:`).
+enrichment:
+  company_size:
+    enabled: true          # LinkedIn company-size lookup via Bright Data
+                           # ("LinkedIn companies - collect by URL" dataset).
+                           # Fills the sheet's Headcount column (E) and feeds the
+                           # rubric's Company-size rule. Uses the shared
+                           # BRIGHTDATA_API_KEY; without it candidates get null,
+                           # Headcount shows "Unknown", and the pipeline proceeds.
+                           # If absent entirely, enrichment defaults OFF.
+    max_per_run: 50        # cost guard: max UNCACHED companies fetched per run
+                           # ($1.5/1K records, 5K/month free; cache hits are free)
+    ttl_days: 180          # company size changes slowly — re-fetch after this
+    negative_ttl_days: 30  # companies that returned no data are retried after this
+    # max_poll_seconds: 240   # snapshot wait budget; see engine/company_enrich.py
 
 filters:
   # Companies that must never be a lead (e.g. a platform vendor whose own

@@ -64,9 +64,12 @@ Company size predicts outreach conversion (Innowise sales, 2026-07):
 never answer.**
 
 Determine size in this order:
-1. **Explicit evidence in `raw_content`** — employee-count / company-size
-   fields in the LinkedIn record if present, or phrases like "team of 40",
-   "500+ employees", "startup", "scale-up".
+1. **Explicit evidence** — primary: the candidate's `company_size` field
+   (Phase-1 enrichment from the company's own LinkedIn page, e.g. `"51-200"`)
+   whenever it is non-null — trust it over any other signal; secondary, when
+   it is null/missing: employee-count / company-size fields in the LinkedIn
+   record in `raw_content`, or phrases like "team of 40", "500+ employees",
+   "startup", "scale-up".
 2. **Your own knowledge of the company name** — a household-name global
    enterprise or its subsidiary (Google, Amazon, Siemens, SAP, major banks,
    Big-4-scale consultancies) is a **giant**; an unknown local name is most

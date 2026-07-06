@@ -70,6 +70,12 @@ class Posting:
     # dates are unreliable (fresh-looking reposts of stale jobs). Phase 2 must
     # treat freshness as unknown and add the `date-suspect` risk flag.
     date_suspect: bool = False
+    # LinkedIn company page URL; "" for non-LinkedIn sources. Used by
+    # company_enrich as the lookup/cache key.
+    company_url: str = ""
+    # Normalized headcount bucket (e.g. "51-200"), set in place by
+    # company_enrich; None when enrichment is off/keyless/failed.
+    company_size: Optional[str] = None
 
     def to_candidate(self, date_found: datetime) -> dict:
         """Candidate shape emitted to candidates.json for Phase 2 LLM scoring."""
@@ -83,5 +89,6 @@ class Posting:
             "date_posted_iso": self.date_posted.isoformat() if self.date_posted else None,
             "raw_type": self.raw_type,
             "raw_content": (self.raw_content or "")[:30000],
+            "company_size": self.company_size,
             "date_suspect": self.date_suspect,
         }

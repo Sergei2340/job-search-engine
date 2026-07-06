@@ -5,6 +5,55 @@ build. Dates are local (Warsaw). Repo created 2026-07-02 by generalizing the
 uiux-lead-generation pipeline (see that project's CHANGELOG for prior
 history).
 
+## 2026-07-06 — Company-size enrichment + Headcount sheet column (0.6.0)
+
+Follow-through on 0.5.0: the Company-size rule scored on inference; now Phase 1
+fetches the actual number. Two coupled parts — the enrichment data and a new
+sheet column that shows it to sales reps directly (11–500 answer far more
+often; giants almost never do — reps prioritize without decoding the score).
+
+- **Part A — `engine/` (Phase 1):** after filters + cap, LinkedIn candidates'
+  `company_url` values are deduped and resolved via a persistent cache
+  (`state/company_size_cache.json`); uncached companies go to the Bright Data
+  "LinkedIn companies — collect by URL" dataset (`gd_l1vikfnt1wgvvqz95w`, same
+  Datasets v3 trigger/poll as the jobs source, reusing a parameterized
+  `_poll_snapshot`). Each candidate gains `company_size`: a normalized bucket
+  (`"51-200"`) or `null`. New `engine/company_enrich.py` + `engine/_util.py`
+  (atomic_write_json moved there to break the import cycle). Graceful
+  degradation: no key / disabled / API error → `null`, pipeline proceeds.
+  Billing is at trigger time, so a poll timeout journals the snapshot id
+  (`_pending`) and recovers it next run instead of re-billing.
+- **New profile knob `enrichment.company_size.*`** (top-level, NOT under
+  `sources:`): `enabled` (template default `true`; OFF when the block is
+  absent, so refreshing only `engine/` never starts surprise billing),
+  `max_per_run` (50), `ttl_days` (180), `negative_ttl_days` (30). Optional
+  `COMPANY_SIZE_CACHE_FILE` env override shares one cache across departments
+  on a shared Bright Data account.
+- **Part B — sheet layout A–Q (was A–P):** new column **E Headcount** between
+  Company and Board; everything from Board shifts one right (manual columns now
+  L/M, Status N, Date Posted O, Score P, Reason Q). Pipeline writes A–K and
+  N–Q. Display rule (`engine/SKILL.md`): enriched bucket verbatim; `≈`-prefixed
+  estimate only for a positively recognized giant (e.g. `≈10,001+`); else
+  `Unknown` — never blank, mirroring the salary rule. Phase 2 refuses to write
+  unless `E1` reads `Headcount` (guards an unmigrated sheet from a one-column
+  shift onto the manual columns).
+- **`profiles/_template/rubric.md`:** Company-size rule detection step 1 now
+  names the `company_size` field as primary evidence; raw_content phrases
+  become secondary. Headings and section order preserved.
+- **Docs/skills:** sheet-template rewritten (17 columns, A1:Q1, migration note
+  that pauses the scheduled task first); setup wizard points at A1:Q1 and the
+  companies dataset; triage parameter-map gains the `enrichment.company_size`
+  knob block + a "Headcount all Unknown" symptom; troubleshoot gains the same
+  symptom + a cost note; every K/L feedback-column mention shifts to L/M.
+- **Migration (any pre-0.6.0 sheet):** pause the Phase-2 scheduled task, insert
+  one blank column left of Board (new E), title it `Headcount`, update the
+  plugin, re-enable — Sheets shifts existing data right automatically; state
+  files unaffected. Old pending `write_queue` entries (no `headcount` key)
+  write `Unknown`, never crash.
+- **Cost:** $1.5/1K company lookups, 5K/month free tier (per Bright Data
+  account); the long-term cache means each company is billed roughly once, so
+  steady-state cost trends toward zero.
+
 ## 2026-07-06 — Company-size preference in scoring (0.5.0)
 
 Innowise sales feedback: companies with 11–500 employees answer outreach far

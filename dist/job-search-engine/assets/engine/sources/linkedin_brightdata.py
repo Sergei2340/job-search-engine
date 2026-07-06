@@ -196,6 +196,7 @@ def _posting_from_record(item: dict, now: datetime, dataset_id: str) -> Posting 
         link=link,
         date_posted=_parse_date(item, now),
         risk_flags="",
+        company_url=str(item.get("company_url") or "").strip(),
         raw={"source": "brightdata", "dataset": dataset_id,
              "job_posting_id": item.get("job_posting_id"),
              "seniority": item.get("job_seniority_level")},
@@ -242,10 +243,15 @@ def _trigger(key: str, dataset_id: str, payload: list[dict]) -> str | None:
     return snap
 
 
-def _poll_snapshot(key: str, snapshot_id: str) -> list[dict]:
+def _poll_snapshot(key: str, snapshot_id: str, *,
+                   poll_interval: int = POLL_INTERVAL_SECONDS,
+                   max_poll_seconds: int = MAX_POLL_SECONDS) -> list[dict]:
+    """Poll a Datasets v3 snapshot until it is ready. Dataset-agnostic — the
+    company-size enrichment reuses it with a tighter budget (kwargs default to
+    the jobs-source constants, so that call site is unchanged)."""
     url = SNAPSHOT_URL.format(snapshot_id=snapshot_id)
     headers = {"Authorization": f"Bearer {key}"}
-    deadline = time.monotonic() + MAX_POLL_SECONDS
+    deadline = time.monotonic() + max_poll_seconds
     while time.monotonic() < deadline:
         try:
             r = requests.get(url, headers=headers, params={"format": "json"}, timeout=60)
@@ -262,16 +268,16 @@ def _poll_snapshot(key: str, snapshot_id: str) -> list[dict]:
                 status = str(data.get("status") or "").lower()
                 if status in ("running", "building", "pending", "collecting"):
                     log.info("Bright Data snapshot %s status=%s; retry in %ds",
-                             snapshot_id, status, POLL_INTERVAL_SECONDS)
-                    time.sleep(POLL_INTERVAL_SECONDS)
+                             snapshot_id, status, poll_interval)
+                    time.sleep(poll_interval)
                     continue
                 data = data.get("data") or data.get("results") or []
             return data if isinstance(data, list) else []
 
         if r.status_code in (202, 404):
             log.info("Bright Data snapshot %s not ready (HTTP %s); retry in %ds",
-                     snapshot_id, r.status_code, POLL_INTERVAL_SECONDS)
-            time.sleep(POLL_INTERVAL_SECONDS)
+                     snapshot_id, r.status_code, poll_interval)
+            time.sleep(poll_interval)
             continue
 
         log.error("Bright Data snapshot poll failed: HTTP %s - %s",
@@ -279,7 +285,7 @@ def _poll_snapshot(key: str, snapshot_id: str) -> list[dict]:
         return []
 
     log.warning("Bright Data snapshot %s not ready after %ds; skipping this run",
-                snapshot_id, MAX_POLL_SECONDS)
+                snapshot_id, max_poll_seconds)
     return []
 
 
