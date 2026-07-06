@@ -14,7 +14,7 @@ Staged layout:
     assets/engine/**                  (code + SKILL.md + run_fetch.ps1)
     assets/scripts/get_oauth_token.py
     assets/profiles/_template/**
-    assets/tests/{__init__.py,test_triage_filters.py,test_e2e_offline.py}
+    assets/tests/*.py                 (all tracked tests)
     assets/requirements.txt, assets/.gitignore, assets/README.md
     assets/ENGINE_VERSION
 
@@ -81,8 +81,8 @@ def stage(staging: Path) -> None:
     for src in (REPO / "profiles/_template").rglob("*"):
         if src.is_file():
             _copy(src, staging / "assets/profiles/_template" / src.relative_to(REPO / "profiles/_template"))
-    for name in ("__init__.py", "test_triage_filters.py", "test_e2e_offline.py"):
-        _copy(REPO / "tests" / name, staging / "assets/tests" / name)
+    for src in sorted((REPO / "tests").glob("*.py")):
+        _copy(src, staging / "assets/tests" / src.name)
     _copy(REPO / "requirements.txt", staging / "assets/requirements.txt")
     _copy(REPO / ".gitignore", staging / "assets/.gitignore")
     _copy(REPO / "plugin/assets-extra/README.md", staging / "assets/README.md")

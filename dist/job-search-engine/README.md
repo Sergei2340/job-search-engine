@@ -40,8 +40,8 @@ setup and stays in your own working folder — this plugin ships no private data
 
 ## Requirements
 
-- Windows with Python 3.10+ (macOS/Linux: cron variant included), machine on
-  at the scheduled hour
+- Windows with Python 3.10+ (macOS/Linux: schedule Phase 1 via cron instead),
+  machine on at the scheduled hour
 - Claude in Chrome extension (sheet writes go through your browser)
 - SerpAPI key (own budget), optionally a Bright Data key
 - A Google account owning the target sheet
