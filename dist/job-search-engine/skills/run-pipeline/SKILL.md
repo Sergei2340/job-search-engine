@@ -42,7 +42,7 @@ folder. Then:
   - output: `reports/EXECUTION_REPORT_<YYYY-MM-DD>.md`
 - OAuth for the sheet write: `PROFILE_DIR/oauth_client.json` +
   `PROFILE_DIR/oauth_token.json`.
-- Lead IDs are `{id_prefix}-NNNN` (e.g. `LEAD-0042`, `PY-0007`).
+- Lead IDs are `{id_prefix}-NNNN` (e.g. `QA-0042`, `PY-0007`).
 
 If `profile.yaml` is missing or lacks `sheet.spreadsheet_id` → write an
 execution report describing the problem and STOP.
@@ -68,6 +68,7 @@ report. Then read `candidates.json` and `last_run_report.json` (same folder).
   "date_posted_iso": "<timestamp or null>",
   "raw_type": "html|serpapi_json|linkedin_json",
   "raw_content": "<string, ≤30KB>",
+  "company_size": "<normalized bucket, e.g. \"51-200\", or null>",
   "date_suspect": false
 }
 ```
@@ -76,6 +77,17 @@ report. Then read `candidates.json` and `last_run_report.json` (same folder).
 record (`linkedin_json`), or cleaned board HTML — each carries title, company,
 location, description, salary and remote flags. **Do not fetch anything over the
 network** — the Cowork sandbox blocks outbound HTTP and Phase 1 already fetched.
+
+`company_size` (since 0.6.0) is Phase 1's company-size enrichment result
+(Bright Data LinkedIn-company lookup, cached in
+`state/company_size_cache.json`): a normalized employee-count bucket —
+typically one of `1-10`, `11-50`, `51-200`, `201-500`, `501-1,000`,
+`1,001-5,000`, `5,001-10,000`, `10,001+` (occasional label variants like
+`2-10` pass through verbatim) — or `null` when enrichment is disabled,
+keyless, or failed. When non-null it is **authoritative evidence for the
+rubric's Company-size rule, detection step 1** and is written verbatim to the
+sheet's **Headcount** column (E). Pre-0.6.0 `candidates.json` files lack the
+key entirely — treat a missing key exactly like `null`.
 
 ## Step 2 — Gate on freshness / emptiness
 
@@ -101,7 +113,15 @@ below are department-neutral mechanics.
 
 - **title** — canonical role title (fall back to `title_guess`).
 - **company** — canonical name (fall back to `company_guess`, then `"Unknown"`).
-- **location** — hiring **Region** (column F). Format `Country, City` (full
+- **headcount** — employee-count bucket for column E. Use the candidate's
+  `company_size` field **verbatim** when present (e.g. `"51-200"`). If it is
+  `null`/missing AND you POSITIVELY recognize the employer as a household-name
+  giant per the rubric's Company-size rule, write an approximate bucket
+  prefixed `≈` (e.g. `"≈10,001+"`) — and stay consistent: writing a `≈` giant
+  bucket means `company:giant` applies. In every other case `"Unknown"`.
+  **Never blank** (same rule as salary). Never guess a non-giant bucket from
+  world knowledge — `≈` is for recognized giants only.
+- **location** — hiring **Region** (column G). Format `Country, City` (full
   country first, city if known): `"Germany, Berlin"`, `"United States, Austin"`.
   Country only when city unknown. US states → `"United States"`; England/
   Scotland/Wales → `"United Kingdom"`. Multi-country → join with ` / `. `"Remote"`
@@ -127,6 +147,9 @@ below are department-neutral mechanics.
     date not trusted).
   - `suspicious` — scam / fake-looking company or domain (job-spam aggregator
     reposts).
+  - `company:giant` — employer (or identifiable end client) is a
+    household-name global enterprise / roughly 5,000+ employees; soft
+    negative per the rubric's Company-size rule.
 
 ### Chunk the work
 
@@ -140,8 +163,8 @@ each chunk return a JSON array, one object per candidate:
     "score": 1-5,
     "reason": "<one sentence, ≤ 15 words, why this score not another>",
     "extracted": {
-      "title": "...", "company": "...", "location": "...",
-      "remote_type": "Remote|Hybrid|On-site|Unknown",
+      "title": "...", "company": "...", "headcount": "51-200|≈10,001+|Unknown",
+      "location": "...", "remote_type": "Remote|Hybrid|On-site|Unknown",
       "salary": "...", "risk_flags": "..."
     }
   }
@@ -150,7 +173,8 @@ each chunk return a JSON array, one object per candidate:
 
 **Scoring failure handling:** if a chunk isn't parseable JSON, retry once with
 "JSON only, no prose". If the retry also fails, default that chunk to score 2,
-reason `"scoring failed — defaulted to review"`, fields from `*_guess`. Log it.
+reason `"scoring failed — defaulted to review"`, fields from `*_guess`
+(`headcount` from the candidate's `company_size`, else `"Unknown"`). Log it.
 
 ---
 
@@ -163,7 +187,8 @@ Phase 1 run). File `state/write_queue.json`:
 {"entries": [
   {"queued_at": "<ISO>", "candidate_id": "<id>", "link": "<url>",
    "status": "pending|written|dropped",
-   "row": { "date_found":"...", "title":"...", "company":"...", "board":"...",
+   "row": { "date_found":"...", "title":"...", "company":"...",
+            "headcount":"...", "board":"...",
             "location":"...", "remote_type":"...", "salary":"...",
             "risk_flags":"...", "link":"...", "status":"New",
             "date_posted":"...", "score":N, "reason":"..." },
@@ -174,6 +199,11 @@ Phase 1 run). File `state/write_queue.json`:
 The file may also carry optional `_note` / `_archive` top-level keys (rotation
 metadata) — always access `entries` by key and preserve unknown top-level keys
 when dumping. Dump with ONE entry per line so the file stays tool-readable.
+
+**Backward compatibility (0.6.0):** `pending` entries queued before 0.6.0
+carry no `headcount` key in `row`. When building the sheet row, treat the
+missing key as `"Unknown"` (column E) — never crash, never re-score, never
+rewrite the queued entry just to add the key.
 
 **Rotation (added 2026-07-06):** in the source (uiux) pipeline the journal grew
 into a 230 KB single line, exceeded file-tool read limits and silently broke
@@ -213,7 +243,14 @@ location;
    start; never reuse a value — including ids of rows later deleted by hand
    (assign from `max(sheet, queue)+1`; the sheet owner may delete weak rows
    manually, so sheet-missing-but-queue-written ids are expected).
-4. Build each row (write **A–J and M–P**; never write K, L):
+4. **Layout precheck (0.6.0):** before the first write of the batch, read
+   `E1`. It must equal `Headcount`. If it is `Board` (or anything else), the
+   sheet is still on the pre-0.6.0 A–P layout — **STOP**, write nothing, and
+   report "sheet not migrated to 0.6.0 (E1 is not `Headcount`)". Writing the
+   new layout onto an unmigrated sheet would shift every value one column and
+   overwrite the specialists' manual columns. Migration is a one-time manual
+   step (see the setup skill's `sheet-template.md`).
+5. Build each row (write **A–K and N–Q**; never write L, M):
 
    | Col | Value |
    |---|---|
@@ -221,20 +258,21 @@ location;
    | B | `date_found` from `date_found_iso`, `YYYY-MM-DD HH:MM` |
    | C | `extracted.title` |
    | D | `extracted.company` |
-   | E | `board` |
-   | F | `extracted.location` (header **Region**, `Country, City`) |
-   | G | `extracted.remote_type` |
-   | H | `extracted.salary` (never blank — `"Not listed"`) |
-   | I | `extracted.risk_flags` |
-   | J | `link` |
-   | K | **skip — manual `Comment/CV link`** |
-   | L | **skip — manual `SM/PM`** |
-   | M | `"New"` |
-   | N | `date_posted` from `date_posted_iso` as `YYYY-MM-DD`, else `""` |
-   | O | `score` (integer 2–5) |
-   | P | `reason` |
+   | E | `extracted.headcount` (never blank — `"Unknown"`) |
+   | F | `board` |
+   | G | `extracted.location` (header **Region**, `Country, City`) |
+   | H | `extracted.remote_type` |
+   | I | `extracted.salary` (never blank — `"Not listed"`) |
+   | J | `extracted.risk_flags` |
+   | K | `link` |
+   | L | **skip — manual `Comment/CV link`** |
+   | M | **skip — manual `SM/PM`** |
+   | N | `"New"` |
+   | O | `date_posted` from `date_posted_iso` as `YYYY-MM-DD`, else `""` |
+   | P | `score` (integer 2–5) |
+   | Q | `reason` |
 
-5. **Write mechanics — Sheets API v4 via a browser JS fetch** (the sandbox is
+6. **Write mechanics — Sheets API v4 via a browser JS fetch** (the sandbox is
    firewalled from `*.googleapis.com`, so run the fetch from a `docs.google.com`
    tab in Chrome MCP — confirmed working 2026-06-30):
    - Refresh an access token: POST `https://oauth2.googleapis.com/token` with
@@ -243,7 +281,7 @@ location;
      `PROFILE_DIR/oauth_token.json` (scope `…/auth/spreadsheets`).
    - Locate rows by reading column A first, then `POST …/{spreadsheetId}/values:batchUpdate`
      with `{valueInputOption:"RAW", data:[{range:"<tab>!A<row>", values:[[...]]}, …]}`
-     — write A–J in one range and M–P in another (skip K, L). `spreadsheetId`
+     — write A–K in one range and N–Q in another (skip L, M). `spreadsheetId`
      and `<tab>` come from `profile.yaml` `sheet.*`.
    - Do all token + API work inside a single JS execution; **return only a
      summary, never the token** (the sandbox blocks cookie/query-string data in
@@ -253,7 +291,7 @@ location;
      `browser_batch`, never embed `\t`, never press Escape between type and Tab.
 
    Invariants:
-   - **Verify every row after writing** (A–P; O integer 2–5; K, L untouched).
+   - **Verify every row after writing** (A–Q; P integer 2–5; L, M untouched).
      Retry once; skip + log on second failure.
    - **Per verified row, update THREE state files** (save per row, not batched):
      1. add the link to `state/seen_urls.json` by **load → merge → dump as ONE
@@ -309,10 +347,14 @@ it is how the pipeline owner tunes the threshold.
   output. Status strings only.
 - Never overwrite an existing row — verify the target row is empty first.
 - Never put all column values into one cell. Verify each cell after write.
-- **Salary (H) never blank** — default `"Not listed"`.
-- **Score (O) is an integer 2–5 only** — score-1 candidates never reach the sheet.
+- **Salary (I) never blank** — default `"Not listed"`.
+- **Headcount (E) never blank** — default `"Unknown"`; the `≈` prefix is only
+  for a positively recognized giant, never a guessed non-giant bucket.
+- **Score (P) is an integer 2–5 only** — score-1 candidates never reach the sheet.
 - **ID (A) is `{id_prefix}-NNNN` — never reuse a value.** Re-read column A at
   batch start.
-- **Columns K and L are manual — never write to them.**
+- **Columns L and M are manual — never write to them.**
+- **Write the new A–Q layout only after the E1 = `Headcount` precheck passes**
+  — an unmigrated (A–P) sheet must be left untouched (Step 4).
 - **When uncertain about a qualifying attribute, score 2 or 3 rather than 1**
   — recall over precision (see the rubric's explicit bias instruction).

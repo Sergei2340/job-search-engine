@@ -27,7 +27,7 @@ Two phases decide which vacancies reach the sheet:
 - First-time setup → **setup-search-engine**.
 - Edits ONLY `profile.yaml`, `rubric.md`, `state/blocked_domains.json` in the
   department's working folder. NEVER edit `engine/` code, `dist/`, schedules,
-  sheet columns K/L, or `state/seen_urls.json` / `state/role_seen.json`.
+  sheet columns L/M, or `state/seen_urls.json` / `state/role_seen.json`.
 
 Change **one lever per session** by default — otherwise the post-change
 histogram is unattributable. When either phase would satisfy the intent, prefer
@@ -125,7 +125,7 @@ couplings and foot-guns to name aloud:
 Flat refusals, with the alternative: the `score ≥ 2` keep threshold (hardcoded
 in `engine/SKILL.md` — an engineering change, redirect to rubric-band tuning),
 `run_once_per_day`, `engine/` code, schedules (the YAML is informational; real
-triggers are Task Scheduler + Cowork), sheet columns K/L. Column-K feedback
+triggers are Task Scheduler + Cowork), sheet columns L/M. Column-L feedback
 routes here: dead/paywall domains → `state/blocked_domains.json`;
 conversion-killer patterns → `rubric.md` hard/soft negatives.
 

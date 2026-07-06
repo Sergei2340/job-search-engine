@@ -67,7 +67,8 @@ Use AskUserQuestion (grouped, not one long form). Collect:
 6. **Alert email** for blocked-write alerts.
 7. **Schedule hour**: any other job-search pipelines on this machine or
    shared API keys? If yes, pick a slot a FULL HOUR away from existing ones;
-   Phase 2 always +30 min after Phase 1 (LinkedIn snapshots build up to 15 min).
+   Phase 2 always +30 min after Phase 1 (LinkedIn snapshot + company-size
+   enrichment build up to ~20 min; 30 min stays safe).
 
 ## Step 3 — Keys, sheet, OAuth
 
@@ -78,11 +79,14 @@ Follow `references/services-setup.md` with the user, collecting into
    queries/day max; size the query list accordingly).
 2. **BRIGHTDATA_API_KEY** — optional but strongly recommended (LinkedIn is the
    richest source of agency/staff-aug leads). Requires subscribing to the
-   "LinkedIn job listings — discover by keyword" dataset. The source
-   self-skips if the key is absent.
-3. **Google Sheet** — user creates a sheet, pastes the exact A1:P1 header from
+   "LinkedIn job listings — discover by keyword" dataset. The same key also
+   powers company-size enrichment (the sheet's Headcount column) via the
+   "LinkedIn companies — collect by URL" dataset. Both the source and the
+   enrichment self-skip if the key is absent (Headcount degrades to
+   `Unknown`).
+3. **Google Sheet** — user creates a sheet, pastes the exact A1:Q1 header from
    `references/sheet-template.md`, shares the URL; extract `spreadsheet_id`
-   into `profile.yaml`. Columns K and L are theirs (manual) — never written.
+   into `profile.yaml`. Columns L and M are theirs (manual) — never written.
 4. **OAuth for sheet writes** — two paths (see `references/oauth-setup.md`):
    given an `oauth_client.json` by the pipeline owner → save it and run
    `python scripts/get_oauth_token.py --profile <dept>` on the host; or create
@@ -94,14 +98,19 @@ Follow `references/services-setup.md` with the user, collecting into
 
 1. From the interview, fill `profiles/<dept>/profile.yaml` (start from the
    template): queries for SerpAPI (≤ 8/day), LinkedIn inputs (keyword × geo,
-   lean — billed per record), caps, schedule, alert email.
+   lean — billed per record), caps, schedule, alert email. Leave
+   `enrichment.company_size.enabled: true` (template default; no interview
+   question needed) — it fills the sheet's Headcount column, costs ~$1.5/1K
+   company lookups with 5K/month free, caches long-term, and self-skips
+   without a Bright Data key.
 2. **Draft the relevance gate** (`relevance_gate` in profile.yaml):
    deny/disambiguate/allow/weak regex lists from the interview answers. Show
    the user a plain-language summary of what will be dropped vs passed and
    confirm. Recall over precision: deny only what can NEVER be their lead.
 3. **Draft `rubric.md`** from `profiles/_template/rubric.md`: business
    context, role-type policy table, their hybrid-skill killers, any vendor
-   exclusion. Show the score 1/2/5 definitions for confirmation.
+   exclusion. Show the score 1/2/5 definitions and the Company-size rule for
+   confirmation.
 4. **Generate gate tests**: copy `assets/tests/` into the working folder,
    create `tests/test_gate_<dept>.py` with 15–30 cases from the interview
    (in-scope titles, out-of-scope adjacents, ambiguous ones) and run it in the
@@ -166,7 +175,7 @@ Per `references/scheduling.md`:
 - `.env`, `oauth_*.json` in place; nothing secret echoed to chat.
 
 Close with the calibration note: watch the score histogram in daily reports
-for the first week and collect specialist feedback in column K. To understand
+for the first week and collect specialist feedback in column L. To understand
 how the sorting works or to change it — loosen/tighten the gate, tune the
 rubric, feed dead/paywall domains into `state/blocked_domains.json`, exclude a
 company — use the `triage-calibration` skill (it decomposes the funnel and walks

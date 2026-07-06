@@ -45,7 +45,9 @@ Each costs **−1 from the base score (floor 2)** and must be recorded in
 | Suspect posting date | `"date_suspect": true` from Phase 1 | `date-suspect` |
 
 Soft negatives (−1, do NOT count toward score 1): hybrid ≤3 office days;
-org-level purely managerial "star" roles; fixed-term/maternity covers.
+org-level purely managerial "star" roles; fixed-term/maternity covers;
+giant employer per the Company-size rule below — record `company:giant`
+in `risk_flags` (the one soft negative that IS flagged, for sheet visibility).
 
 Downgrades apply AFTER the base score (2–5) is set by the positive rubric.
 
@@ -54,6 +56,36 @@ Downgrades apply AFTER the base score (2–5) is set by the positive rubric.
 Any posting with `m/w/d`, `m/f/x`, `d/f/m`, `w/m/d` markers, a German-language
 body, or a DACH company/location: actively scan for a German requirement.
 Body written in German → `lang:de` automatically.
+
+## Company-size rule
+
+Company size predicts outreach conversion (Innowise sales, 2026-07):
+**11–500 employees answer far more often (sweet spot 50–200); giants almost
+never answer.**
+
+Determine size in this order:
+1. **Explicit evidence** — primary: the candidate's `company_size` field
+   (Phase-1 enrichment from the company's own LinkedIn page, e.g. `"51-200"`)
+   whenever it is non-null — trust it over any other signal; secondary, when
+   it is null/missing: employee-count / company-size fields in the LinkedIn
+   record in `raw_content`, or phrases like "team of 40", "500+ employees",
+   "startup", "scale-up".
+2. **Your own knowledge of the company name** — a household-name global
+   enterprise or its subsidiary (Google, Amazon, Siemens, SAP, major banks,
+   Big-4-scale consultancies) is a **giant**; an unknown local name is most
+   likely an SMB.
+3. **Unknown or ambiguous → NEUTRAL**: no penalty (bias instruction) and no
+   size-fit bonus.
+
+Effects:
+- **Size fit** (~11–500, ideally 50–200) → the primary Score-4 positive signal.
+- **Giant** (household-name brand or roughly 5,000+ employees) → soft
+  negative −1, risk_flag `company:giant`. Never counts toward the
+  two-hard-negatives score-1 rule. Stacks with the agency signal: a giant
+  consultancy with staff-aug language is 5 − 1 = 4.
+- **In-between (~500–5,000) and micro (<11)** → neutral.
+- Judge the **hiring company, not the poster**: a staffing agency posting for
+  an identifiable giant client → giant applies; end client unknown → neutral.
 
 ## Score 2 — minimum bar
 
@@ -71,8 +103,11 @@ Meets all score-2 criteria, no red flags. Baseline "fine lead."
 
 ## Score 4
 
-Score-3 + a concrete positive signal: well-funded or well-known company,
-senior/lead role, clear scope, mature engineering org.
+Score-3 + a concrete positive signal. **Primary signal: company-size fit** —
+the employer looks like ~11–500 employees (sweet spot 50–200) per the
+Company-size rule. Secondary signals: recently funded (seed–C), senior/lead
+role, clear scope, mature engineering org. Being a famous global brand is
+NOT a positive signal — see the Company-size rule.
 
 ## Score 5
 

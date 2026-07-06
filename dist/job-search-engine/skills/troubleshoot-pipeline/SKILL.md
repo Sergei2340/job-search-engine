@@ -73,6 +73,31 @@ Check `source_counts` in `last_run_report.json`.
   location (engine/SKILL.md Step 3.9 (3.5)). Delete the duplicate row in the
   sheet by hand; NEVER reuse its id; leave its link in seen_urls.
 
+## Headcount column (E) all "Unknown"
+
+Enrichment is Phase 1 only — Phase 2 just displays `company_size`. Check in
+order:
+- No `BRIGHTDATA_API_KEY` in `profiles/<dept>/.env` → enrichment self-skips.
+  Expected degradation, not a fault; add the key to enable it.
+- `enrichment.company_size.enabled: false` in profile.yaml → deliberately off
+  (a calibration decision — see the triage-calibration skill). Note it also
+  defaults OFF when the whole `enrichment:` block is absent (e.g. a pre-0.6.0
+  profile whose `engine/` was updated but profile.yaml wasn't).
+- Enabled + keyed but still Unknown → `logs/fetch_*.log`: trigger/poll errors
+  on the companies dataset (`gd_l1vikfnt1wgvvqz95w` — subscription missing?);
+  or `company_enrichment.failed` in `last_run_report.json`. Candidates still
+  flow with `company_size: null` by design — the pipeline never blocks on
+  enrichment.
+- `state/company_size_cache.json` corrupt (NUL bytes, glued JSON) → same
+  self-heal fix as below; worst case delete it — the only cost is re-lookups
+  ($1.5/1K, 5K/month free).
+- `≈`-prefixed values (e.g. `≈10,001+`) are NOT enrichment output — they are
+  Phase-2 estimates for recognized giants and are normal.
+- A one-off `Unknown` on an otherwise-enriched day: pre-0.6.0 pending
+  write_queue entries legitimately write `Unknown` once (no headcount key).
+- Sheet still on the old A–P layout → Phase 2 refuses to write (E1 precheck).
+  Migrate the sheet per the setup skill's `sheet-template.md` first.
+
 ## Pending queue entries after a successful run
 
 A bug by definition — Step 4 must drain pending on success. Re-run Phase 2
@@ -82,8 +107,12 @@ A bug by definition — Step 4 must drain pending on success. Re-run Phase 2
 ## Costs suddenly higher
 
 Bright Data bills per record: check `inputs` count × days, and that
-`run_once_per_day: true` is still set. SerpAPI: queries/day × 31 must stay
-under the plan.
+`run_once_per_day: true` is still set. Company-size enrichment bills only
+UNCACHED lookups ($1.5/1K, 5K/month free) — a spike there means the cache
+(`state/company_size_cache.json`) was deleted/bypassed, or several departments
+share one Bright Data account (the free tier and key are per-account; point
+them at a shared `COMPANY_SIZE_CACHE_FILE` to stop paying per department).
+SerpAPI: queries/day × 31 must stay under the plan.
 
 ## Files mysteriously corrupt (NUL bytes, glued JSON)
 

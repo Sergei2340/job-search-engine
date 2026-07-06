@@ -50,7 +50,7 @@ TITLE_NOISE_TOKENS: frozenset[str] = frozenset({
 })
 
 # Aggregators whose posting dates can't be trusted: they repost month-old jobs
-# with fresh-looking dates ("1/10 month old" in specialists' K-comments despite
+# with fresh-looking dates ("1/10 month old" in specialists' L-comments despite
 # the <=24h rule; 2026-07-02 review). Their postings get date_posted=None +
 # date_suspect=True.
 UNRELIABLE_DATE_DOMAINS: frozenset[str] = frozenset({
@@ -92,6 +92,7 @@ class Profile:
     profile_dir: Path
     gate: RelevanceGate
     sources: dict
+    enrichment: dict = field(default_factory=dict)
     candidate_cap: int = 100
     max_age_hours: int = 24
     role_seen_window_days: int = 30
@@ -124,6 +125,15 @@ class Profile:
         return self.state_dir / "linkedin_state.json"
 
     @property
+    def company_size_cache_file(self) -> Path:
+        """Persistent company-size cache. Per-profile by default; a deployment
+        running several departments off one Bright Data account can point them
+        all at one shared file via COMPANY_SIZE_CACHE_FILE so a company looked
+        up for one department isn't re-billed for another."""
+        return Path(os.environ.get("COMPANY_SIZE_CACHE_FILE")
+                    or (self.state_dir / "company_size_cache.json"))
+
+    @property
     def candidates_file(self) -> Path:
         return self.profile_dir / "candidates.json"
 
@@ -137,6 +147,12 @@ class Profile:
     def source_enabled(self, name: str) -> bool:
         cfg = self.source_cfg(name)
         return bool(cfg) and bool(cfg.get("enabled", True))
+
+    def enrichment_cfg(self, name: str) -> dict:
+        """Config for a Phase-1 enrichment (e.g. 'company_size'). Empty dict
+        when the profile has no `enrichment:` block — callers decide the
+        enabled default (company_size defaults OFF when absent)."""
+        return (self.enrichment or {}).get(name) or {}
 
 
 def resolve_profile_dir(name_or_path: str) -> Path:
@@ -179,6 +195,7 @@ def load_profile(name_or_path: str, *, load_env: bool = True) -> Profile:
         profile_dir=profile_dir,
         gate=gate,
         sources=data["sources"] or {},
+        enrichment=data.get("enrichment") or {},
         candidate_cap=int(data.get("candidate_cap", 100)),
         max_age_hours=int(data.get("max_age_hours", 24)),
         role_seen_window_days=int(data.get("role_seen_window_days", 30)),

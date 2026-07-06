@@ -35,8 +35,8 @@ setup and stays in your own working folder — this plugin ships no private data
    dedup/freshness/relevance filters; writes `candidates.json`.
 2. **Score + write (Claude, ~30 min later):** candidates are scored against
    your department rubric; kept rows land in your Google Sheet with lead ids,
-   risk flags, and reasons. Columns K/L stay manual for your specialists'
-   feedback.
+   risk flags, company headcount, and reasons. Columns L/M stay manual for your
+   specialists' feedback.
 
 ## Requirements
 

@@ -15,7 +15,7 @@ What this script does (cheap mechanical filters only):
 - Fetch from the profile's enabled sources in parallel
 - Drop postings with no link / a search-page link
 - Drop postings on blocked domains (state/blocked_domains.json, curated from
-  specialists' column-K feedback)
+  specialists' column-L feedback)
 - Drop postings already in state/seen_urls.json (dedup, cross-run + intra-run,
   canonical-URL based)
 - Drop role-level duplicates (company + noise-stripped title; location
@@ -41,7 +41,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -51,32 +50,22 @@ from urllib.parse import urlparse
 
 if __package__ in (None, ""):  # `python engine/main.py` fallback
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from engine._util import atomic_write_json  # noqa: E402
     from engine.profile import Profile, load_profile  # noqa: E402
     from engine.sources import Posting, canonical_url  # noqa: E402
     from engine.sources import serpapi_jobs, linkedin_brightdata  # noqa: E402
+    from engine import company_enrich  # noqa: E402
 else:
+    from ._util import atomic_write_json
     from .profile import Profile, load_profile
     from .sources import Posting, canonical_url
     from .sources import serpapi_jobs, linkedin_brightdata
+    from . import company_enrich
+
+# atomic_write_json is defined in engine/_util.py and re-exported here so
+# existing `engine.main.atomic_write_json` references keep working.
 
 log = logging.getLogger("job-search-engine")
-
-
-def atomic_write_json(path: Path, obj) -> None:
-    """Write JSON atomically: temp file in the same dir, fsync, os.replace.
-
-    Hardening ported from the uiux pipeline 2026-07-06: its Phase 2 found
-    candidates.json with a second stale array concatenated after the fresh one
-    ("Extra data" on json.loads). A plain write_text() leaves a window where
-    readers/sync layers can observe a partially rewritten file; os.replace
-    guarantees readers only ever see one complete document.
-    """
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(obj, f, indent=2)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
 
 
 # Registry of available source connectors. A profile enables a subset via
@@ -406,6 +395,12 @@ def run(profile: Profile, max_age_hours: int | None = None,
                     profile.dept, len(kept) + len(capped_out), profile.candidate_cap,
                     ", ".join(f"{b}={n}" for b, n in sorted(capped_out_counts.items())))
 
+    # Company-size enrichment runs AFTER the cap so only billed-worthy
+    # candidates trigger Bright Data lookups. Sets p.company_size in place;
+    # degrades to None on missing key / disabled / API failure, never raises.
+    enrich_stats = company_enrich.enrich_company_sizes(profile, kept, now)
+    log.info("[%s] Company-size enrichment: %s", profile.dept, enrich_stats)
+
     candidates = [p.to_candidate(now) for p in kept]
     out.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_json(out, candidates)
@@ -422,6 +417,7 @@ def run(profile: Profile, max_age_hours: int | None = None,
         "capped": capped,
         "candidate_cap": profile.candidate_cap,
         "capped_out_counts": capped_out_counts,
+        "company_enrichment": enrich_stats,
         "candidates_file": str(out),
     }
     atomic_write_json(report_out, report)
