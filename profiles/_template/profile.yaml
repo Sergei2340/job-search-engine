@@ -1,7 +1,8 @@
 # =============================================================================
 # TEMPLATE department profile. Copy this folder to profiles/<dept>/ and fill in
-# every <...> placeholder. See docs/ADD_DEPARTMENT.md for the full onboarding
-# runbook. Example values below sketch a Python department.
+# every <...> placeholder. The setup-search-engine skill ("set up the jobs
+# pipeline") walks through this end-to-end. Example values below sketch a Python
+# department.
 # =============================================================================
 
 dept: <dept>                      # e.g. python

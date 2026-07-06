@@ -17,7 +17,7 @@ profiles/<dept>/        YOUR department (created by the wizard)
   state/                dedup + write-queue state (do not hand-edit)
   candidates.json       latest fetch output (overwritten daily)
   reports/, logs/       Phase 2 reports, Phase 1 logs
-tests/                  offline tests: gate parity, filters, e2e
+tests/                  offline tests: gate parity, filters, e2e, serpapi guard
 research/               job-board research reports (research-job-boards skill; safe to share)
 ```
 
@@ -26,7 +26,8 @@ Daily flow: Task Scheduler `HH:00` → `engine/run_fetch.ps1 -ProfileName <dept>
 Google Sheet + `reports/EXECUTION_REPORT_<date>.md`.
 
 Manual run: `python -m engine.main --profile <dept>` · Tests:
-`python -m tests.test_gate_<dept>` / `test_triage_filters` / `test_e2e_offline`.
+`python -m tests.test_gate_<dept>` / `test_triage_filters` / `test_e2e_offline` /
+`test_serpapi_fetch_returns_list`.
 
 Rules that keep the data sane: never reuse a lead id; never write sheet
 columns K/L (specialists' feedback lives there); state files are whole-file

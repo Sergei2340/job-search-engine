@@ -37,7 +37,7 @@ engine/                 shared logic — the only place code lives
 profiles/_template/     department profile template (ships in the plugin)
 scripts/                get_oauth_token.py (sheet OAuth), make_plugin.py (plugin build)
 plugin/                 Cowork plugin sources (skills, manifest, working-folder README)
-tests/                  filters + offline e2e (ship in the plugin)
+tests/                  unit + offline tests (all ship in the plugin)
 ```
 
 The department working-folder structure (a copy of `engine/` plus
@@ -51,6 +51,7 @@ cd job-search-engine
 python -m pip install -r requirements.txt
 python -m tests.test_triage_filters             # filters
 python -m tests.test_e2e_offline                # e2e, no network
+python -m tests.test_serpapi_fetch_returns_list # serpapi fetch regression guard
 python scripts\make_plugin.py                   # builds job-search-engine.plugin
 ```
 
