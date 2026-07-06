@@ -5,6 +5,38 @@ build. Dates are local (Warsaw). Repo created 2026-07-02 by generalizing the
 uiux-lead-generation pipeline (see that project's CHANGELOG for prior
 history).
 
+## 2026-07-06 — Company-size preference in scoring (0.5.0)
+
+Innowise sales feedback: companies with 11–500 employees answer outreach far
+more often (sweet spot 50–200 — the ideal customer profile); giant companies
+almost never answer. The current rubric contradicted this (Score 4 rewarded
+"well-known company"). No new data source or code — the change is entirely
+in the scoring rubric template, since Phase 2 already sees the full raw
+posting payload and cannot make network calls.
+
+- **`profiles/_template/rubric.md`:** new `## Company-size rule` section
+  (detection order: explicit size evidence in `raw_content` → LLM's own
+  knowledge of the company name → unknown/ambiguous defaults to neutral,
+  never penalized); `## Score 4` reworked so company-size fit (~11–500,
+  ideally 50–200) is the primary positive signal, "well-known company" is
+  removed, "well-funded" narrowed to "recently funded (seed–C)" to stop it
+  re-admitting giants; giant employer (household-name brand or roughly
+  5,000+ employees) added as a **soft** negative (−1, floor 2, does NOT
+  count toward the two-hard-negatives score-1 rule) flagged `company:giant`
+  in `risk_flags` — soft, not hard, because size judgment rests on LLM world
+  knowledge and can misfire, and score-1 drops are invisible and
+  unrecoverable while a soft −1 still surfaces the row for human review.
+- **`engine/SKILL.md`:** added `company:giant` to the base `risk_flags`
+  vocabulary (Step 3) — department-agnostic sales signal, not a per-rubric
+  extension.
+- **`plugin/skills/triage-calibration/references/parameter-map.md`:** new
+  symptom row ("гиганты в таблице") and a Phase-2 lever entry describing how
+  to port the section into a pre-0.5.0 department rubric as one change.
+- **Expected histogram shift:** some existing 4s ("well-known company") drop
+  to 3; giants drop one band (e.g. 3 → 2). This is a **template-only**
+  change — a live department applies it via the triage-calibration skill
+  with a backtest, not automatically.
+
 ## 2026-07-06 — Repo hygiene: ship serpapi test, fix template pointer, backfill history (0.4.2)
 
 Housekeeping pass — no engine behavior change, but the shipped plugin content

@@ -101,7 +101,8 @@ Follow `references/services-setup.md` with the user, collecting into
    confirm. Recall over precision: deny only what can NEVER be their lead.
 3. **Draft `rubric.md`** from `profiles/_template/rubric.md`: business
    context, role-type policy table, their hybrid-skill killers, any vendor
-   exclusion. Show the score 1/2/5 definitions for confirmation.
+   exclusion. Show the score 1/2/5 definitions and the Company-size rule for
+   confirmation.
 4. **Generate gate tests**: copy `assets/tests/` into the working folder,
    create `tests/test_gate_<dept>.py` with 15–30 cases from the interview
    (in-scope titles, out-of-scope adjacents, ambiguous ones) and run it in the

@@ -10,6 +10,7 @@ Change **one lever per session**.
 |---|---|---|
 | "мало лидов" / too few | widen `allow_titles` / `weak_titles`; raise `candidate_cap`; add SerpAPI query (≤ 8/day) | first confirm it's not a quiet market (empty `[]` pool) or an acute failure → troubleshoot |
 | "много мусора в таблице" | tighten `rubric.md` bands / add hard negative; add `deny_titles` | prefer rubric (Phase 2, reversible) over gate (Phase 1, invisible drops) |
+| "гиганты в таблице" / "big companies don't answer" | rubric `Company-size rule` (giant soft negative; size-fit Score-4 signal) | soft → hard-negative escalation only after histogram/column-K evidence; pre-0.5.0 rubrics lack the section — port it verbatim |
 | "джуны проскакивают" | rubric Role-type / Score-2 wording | NOT a gate job — seniority lives in scoring, not titles |
 | "повторы одной вакансии" | `role_seen_window_days` ↑; `extra_title_noise_tokens` | tokens re-key dedup in BOTH phases (see 🔴 below) |
 | "мёртвые / paywall ссылки" | `state/blocked_domains.json` (🟢 fast path) | one host per line; keys starting `_` are comments |
@@ -76,6 +77,10 @@ Every gate edit → add test cases first, then green tests (SKILL Step 4).
   Tightening here is the reversible way to cut junk.
 - **Score 2 / 3 / 4 / 5** — the positive bands (region list, salary floor,
   agency/staff-aug signal).
+- **Company-size rule** (since 0.5.0) — size bands (11–500 fit, 50–200 sweet
+  spot) + giant soft negative `company:giant`. Absent in pre-0.5.0 department
+  rubrics: porting = insert the whole section verbatim before the bias
+  section + rework Score 4 + extend the soft-negatives line, as ONE lever.
 - **Role-type policy** — the precision backstop; where seniority / adjacent-role
   caps live.
 - **Explicit bias instruction** — recall over precision. Do not delete; it is a

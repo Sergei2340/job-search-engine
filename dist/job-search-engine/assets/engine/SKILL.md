@@ -119,6 +119,9 @@ below are department-neutral mechanics.
     date not trusted).
   - `suspicious` — scam / fake-looking company or domain (job-spam aggregator
     reposts).
+  - `company:giant` — employer (or identifiable end client) is a
+    household-name global enterprise / roughly 5,000+ employees; soft
+    negative per the rubric's Company-size rule.
 
 ### Chunk the work
 
