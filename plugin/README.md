@@ -18,6 +18,11 @@ setup and stays in your own working folder — this plugin ships no private data
   scheduled task the wizard creates.
 - **troubleshoot-pipeline** — say "pipeline didn't run" / "no leads today" /
   "sheet write blocked".
+- **triage-calibration** — run **/triage-calibration** (or say "как работает
+  отбор вакансий" / "too few leads" / "много мусора"). Decomposes the two-phase
+  triage funnel with your real run numbers, then walks any parameter change
+  (gate, rubric, filters, blocked domains) through a diff → backtest → backup →
+  log → one-command rollback pipeline. Explanation and safe tuning, not repair.
 - **research-job-boards** — say "research job boards for `<role>`". Finds and
   live-verifies boards worth adding for a role, and reports each board's
   integration path (query tweak, RSS, API, vendor) without touching your

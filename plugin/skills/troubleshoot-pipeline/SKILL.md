@@ -12,6 +12,11 @@ profile if several). Evidence lives in: `profiles/<dept>/last_run_report.json`
 `profiles/<dept>/state/*` (dedup + queue). Read those FIRST, then match the
 symptom below. Never print API keys or OAuth contents while diagnosing.
 
+This skill fixes a **broken or failed** run. For chronic tuning of a *working*
+pipeline — decomposing how the sorting works, loosening/tightening the gate,
+adjusting the rubric or filters, "мало лидов" / "много мусора" as an ongoing
+complaint rather than a sudden drop — use the `triage-calibration` skill.
+
 ## No candidates.json / stale `run_at`
 
 Phase 1 didn't run or crashed.
@@ -42,8 +47,10 @@ Check `source_counts` in `last_run_report.json`.
 - huge `duplicate`/`duplicate_role` right after setup → state was copied from
   another machine or a prior test; expected on re-runs the same day.
 - everything filtered at the source (raw counts high, candidates low) → the
-  relevance gate is too strict: run the dept gate test, add the missed titles
-  as cases, loosen `allow_titles`/`weak_titles`, re-test, re-run.
+  relevance gate is too strict. If this is a sudden regression right after a
+  profile edit, revert the edit; otherwise it is a chronic-tuning job — hand off
+  to the `triage-calibration` skill (it loosens `allow_titles`/`weak_titles`
+  with a gate-test + backtest + rollback safety net).
 
 ## Sheet write blocked (Phase 2 report says both paths failed)
 
