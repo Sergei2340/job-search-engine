@@ -163,6 +163,21 @@ Phase 1 run). File `state/write_queue.json`:
 ]}
 ```
 
+The file may also carry optional `_note` / `_archive` top-level keys (rotation
+metadata) — always access `entries` by key and preserve unknown top-level keys
+when dumping. Dump with ONE entry per line so the file stays tool-readable.
+
+**Rotation (added 2026-07-06):** in the source (uiux) pipeline the journal grew
+into a 230 KB single line, exceeded file-tool read limits and silently broke
+journaling (sheet writes succeeded; entries had to be backfilled from
+execution reports). To prevent recurrence, at the START of Step 3.9: if
+`state/write_queue.json` exceeds ~120 KB or ~400 entries, move all
+`written`/`dropped` entries older than 7 days into
+`state/write_queue_archive_<first-date>_<last-date>.json` (same
+`{"entries": [...]}` shape, pretty-printed) and rewrite the active file with
+the remainder. Never read or write the journal via the bash `/mnt` mount (it
+can serve stale snapshots) — use the file tools on the host paths.
+
 Before any write: (1) load queue (create `{"entries": []}` if absent);
 (2) **expire** `pending` entries older than 7 days → `dropped`, note in report;
 (3) **enqueue** today's kept candidates (score ≥ 2), skipping links already in
