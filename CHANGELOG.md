@@ -5,6 +5,46 @@ build. Dates are local (Warsaw). Repo created 2026-07-02 by generalizing the
 uiux-lead-generation pipeline (see that project's CHANGELOG for prior
 history).
 
+## 2026-07-06 — update-to-latest-version skill + release discipline (0.7.0)
+
+Deployed pipelines roll out from different plugin versions and get customized
+between upgrades. This release adds the machinery to upgrade one in place
+without losing that customization, and the discipline that keeps future
+upgrades safe.
+
+- **New skill `update-to-latest-version`** (`plugin/skills/update-to-latest-version/`):
+  fingerprints a deployment (integrity → lineage → engine version by hash-match
+  against shipped manifests, not by its self-reported `ENGINE_VERSION`), then
+  routes it — already-current / repair-first / fork→transplant / in-place. In
+  place it REPLACEs `engine/` wholesale (copy-verify-swap, after verifying the
+  deployed engine is intact or surfacing a hand-edit as a fork event) and
+  three-way-merges `profile.yaml`/`rubric.md`: deployed file vs the template of
+  ITS version vs the new template, per `##`-heading section, proposing each
+  change with a plain-language reason and applying only on approval. Rides
+  triage-calibration's pending/backup/log/rollback/watch machinery; sheet
+  migrations cite the setup skill's canonical procedure. References:
+  `migrations.md` (per-release steps: → 0.5.0, → 0.6.0; version-base floor
+  mapping) and `transplant.md` (pre-plugin forks like uiux/Unity).
+- **Shipped upgrade inputs:** `profiles/_template_history/<version>/` (past
+  template snapshots — the 3-way base) and `manifests/<version>.sha256`
+  (per-version engine hashes — drift detection). Backfilled for 0.3.0–0.6.0
+  from git; the current version's pair is generated/checked at build.
+- **`scripts/make_plugin.py`:** stages the history + manifests, generates and
+  sync-checks the current version's manifest, adds `.sha256` to the scanned
+  text suffixes, and tightens the non-template-profile privacy guard so
+  `_template_history/` passes by rule rather than by prefix accident.
+- **Release discipline** codified in the root README + a compatibility rule
+  (default-off-when-absent, missing-key ≡ neutral, sentinel-guarded contract
+  surfaces, additive schemas / lazy state, no lockstep) — generalizing the
+  runtime guards 0.6.0 shipped. Enforced by `tests/test_template_history.py`
+  (self-skips outside the repo) + the build's manifest-sync check.
+- setup Step 0.3 reroutes plugin updates to the new skill and pins the
+  `ENGINE_VERSION` artifact; troubleshoot points mixed-version symptoms at it;
+  plugin README lists it; the triage parameter-map's 0.5.0 port anchor is
+  corrected to the real position.
+- No engine, rubric, or sheet change — a deployment already on 0.6.0 sees only
+  the new upgrade tooling.
+
 ## 2026-07-06 — Company-size enrichment + Headcount sheet column (0.6.0)
 
 Follow-through on 0.5.0: the Company-size rule scored on inference; now Phase 1
@@ -85,6 +125,11 @@ posting payload and cannot make network calls.
   to 3; giants drop one band (e.g. 3 → 2). This is a **template-only**
   change — a live department applies it via the triage-calibration skill
   with a backtest, not automatically.
+- **Migration:** rubric-only, one lever (insert `## Company-size rule` between
+  `## DACH language rule` and `## Score 2`, rework Score 4, extend the
+  soft-negatives line). Since 0.7.0 the `update-to-latest-version` skill walks
+  it as its → 0.5.0 step — proposed diffs requiring approval, never a silent
+  apply; see that skill's `references/migrations.md`.
 
 ## 2026-07-06 — Repo hygiene: ship serpapi test, fix template pointer, backfill history (0.4.2)
 

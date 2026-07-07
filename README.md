@@ -52,6 +52,8 @@ python -m pip install -r requirements.txt
 python -m tests.test_triage_filters             # filters
 python -m tests.test_e2e_offline                # e2e, no network
 python -m tests.test_serpapi_fetch_returns_list # serpapi fetch regression guard
+python -m tests.test_company_enrich             # company-size enrichment
+python -m tests.test_template_history           # release-discipline snapshot check
 python scripts\make_plugin.py                   # builds job-search-engine.plugin
 ```
 
@@ -73,3 +75,47 @@ Manual Phase 1 runs happen in the department's working folder:
   `engine/SKILL.md` must match byte-for-byte in semantics.
 - Logic changes go only to `engine/`; department-scope changes go only to its
   `profiles/<dept>/`.
+
+## Compatibility rule (every release, no exceptions)
+
+Deployments upgrade in place via the `update-to-latest-version` skill and are
+customized between upgrades, so a release must run correctly against every
+artifact the previous release could have produced, on each surface
+independently:
+
+1. **Default-off-when-absent** — a new engine with an old profile behaves
+   exactly like the old engine. A feature activates only when its config block
+   is present; an absent key/block is never an error and never a behavior change.
+2. **Missing-key ≡ neutral** — readers treat a missing key in any data artifact
+   (`candidates.json`, `write_queue`, `state/*`) as its documented neutral value
+   (`null` / `"Unknown"` / empty). Never crash, re-fetch, or re-score.
+3. **Sentinel-guarded contract surfaces** — any change to a shared contract
+   surface (sheet layout, state/report schema) ships a cheap precheck sentinel
+   (e.g. `E1 == "Headcount"`), and the writer STOPS with a named reason on
+   mismatch. A wrong-order migration is a clean stop, never misaligned data.
+4. **Additive schemas, lazy state** — profile/state schemas evolve additively;
+   unknown keys ignored, removed keys kept working one release with a note; state
+   migrates on the engine's next normal atomic rewrite, never batch-rewritten by
+   an upgrade.
+5. **No lockstep** — no release may *require* engine, profile, rubric, sheet, and
+   skills to move together. Any single surface upgraded alone yields unchanged
+   behavior or a clean stop — never corruption.
+
+## Release discipline
+
+Every release that touches a working-folder surface:
+
+- adds an entry to `plugin/skills/update-to-latest-version/references/migrations.md`;
+- snapshots the template into `profiles/_template_history/<version>/` and ships a
+  `manifests/<version>.sha256` (both enforced by `tests/test_template_history.py`
+  and the build's manifest-sync check);
+- carries a `Migration:` note in `CHANGELOG.md`;
+- keeps changes additive and satisfies the compatibility rule above.
+
+After bumping `plugin/.claude-plugin/plugin.json`, rebuild and refresh the
+tracked release tree manually: `python scripts/make_plugin.py` (writes the
+gitignored `.plugin` zip), then **delete `dist/job-search-engine/` and extract
+the zip there fresh** — never extract over the old tree: extract-over is
+additive-only and keeps files a release deleted (the stale-artifact class
+PR #6 already had to clean once). Commit the refreshed tree; the rebuild
+restamps `assets/ENGINE_VERSION` with today's date.
