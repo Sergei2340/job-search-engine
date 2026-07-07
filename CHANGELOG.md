@@ -127,9 +127,9 @@ posting payload and cannot make network calls.
   with a backtest, not automatically.
 - **Migration:** rubric-only, one lever (insert `## Company-size rule` between
   `## DACH language rule` and `## Score 2`, rework Score 4, extend the
-  soft-negatives line). Since 0.7.0 the `update-to-latest-version` skill applies
-  it automatically as its → 0.5.0 step; see that skill's
-  `references/migrations.md`.
+  soft-negatives line). Since 0.7.0 the `update-to-latest-version` skill walks
+  it as its → 0.5.0 step — proposed diffs requiring approval, never a silent
+  apply; see that skill's `references/migrations.md`.
 
 ## 2026-07-06 — Repo hygiene: ship serpapi test, fix template pointer, backfill history (0.4.2)
 

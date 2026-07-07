@@ -114,5 +114,8 @@ Every release that touches a working-folder surface:
 
 After bumping `plugin/.claude-plugin/plugin.json`, rebuild and refresh the
 tracked release tree manually: `python scripts/make_plugin.py` (writes the
-gitignored `.plugin` zip), then unzip it over `dist/job-search-engine/` and
-commit — the rebuild restamps `assets/ENGINE_VERSION` with today's date.
+gitignored `.plugin` zip), then **delete `dist/job-search-engine/` and extract
+the zip there fresh** — never extract over the old tree: extract-over is
+additive-only and keeps files a release deleted (the stale-artifact class
+PR #6 already had to clean once). Commit the refreshed tree; the rebuild
+restamps `assets/ENGINE_VERSION` with today's date.

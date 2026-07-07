@@ -1,10 +1,11 @@
 # Per-release migrations (Step U2)
 
 One entry per release that touches any working-folder surface. The newest
-plugin ships the full cumulative list, so a deployment N versions behind replays
-the entries between its version and the target in order. Each entry is a
-proposal set for Step U6/U7 — nothing here is applied without the user's
-approval.
+plugin ships the full cumulative list; Step U2 selects the PENDING entries by
+evaluating each entry's Preconditions against the deployment (version range is
+only a hint — a partially-upgraded folder can have older migrations still
+pending). Each entry is a proposal set for Step U6/U7 — nothing here is applied
+without the user's approval.
 
 ## Version-base mapping (Step U6)
 
@@ -113,9 +114,8 @@ restore the `Board` title).
 
 ## Release discipline (for whoever ships the next version)
 
-Every release that changes a working-folder surface adds an entry here, ships a
-`_template_history/<new-version>/` snapshot and a `manifests/<new-version>.sha256`
-(both enforced by `tests/test_template_history.py` + the build's manifest-sync
-check), and carries a `Migration:` block in `CHANGELOG.md` pointing here. Keep
-migrations additive and guard contract-surface changes with a sentinel (see the
-compatibility rule in the root README) so no upgrade needs lockstep.
+Repo-facing, one rule here: every release that changes a working-folder surface
+**adds an entry to this file**. The full canonical checklist (template snapshot,
+manifest, CHANGELOG note, compatibility rule, dist refresh) lives in the plugin
+repo's root README — follow it there; this shipped copy deliberately does not
+restate it.

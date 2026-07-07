@@ -1,6 +1,6 @@
 ---
 name: update-to-latest-version
-description: Upgrade an already-deployed job-search-engine working folder to the installed plugin version WITHOUT losing the department's customizations. Use when the user says "обнови пайплайн", "обнови движок", "обновись до последней версии", "новая версия плагина — что делать", "update the pipeline", "update the engine", "upgrade to the latest version", or has just reinstalled a newer plugin and wants their deployment brought up to date. Compares the deployed files against the templates of their version and the new templates, then proposes each change with a plain-language explanation and applies only what the user approves. For chronic tuning of a working pipeline use triage-calibration; for a broken run use troubleshoot-pipeline; for first-time setup use setup-search-engine. Requires a working folder set up by the setup-search-engine skill.
+description: Upgrade an already-deployed job-search-engine working folder to the installed plugin version WITHOUT losing the department's customizations. Use when the user says "обнови пайплайн", "обнови движок", "обновись до последней версии", "новая версия плагина — что делать", "update the pipeline", "update the engine", "upgrade to the latest version", or has just reinstalled a newer plugin and wants their deployment brought up to date. Compares the deployed files against the templates of their version and the new templates, then proposes each change with a plain-language explanation and applies only what the user approves. For chronic tuning of a working pipeline use triage-calibration; for a broken run use troubleshoot-pipeline; for first-time setup use setup-search-engine. Works on any existing deployment: a working folder set up by the setup-search-engine skill gets an in-place upgrade; a pre-plugin fork gets re-onboarded via the transplant path while keeping its queries, dedup history, and sheet.
 ---
 
 # job-search-engine — update a deployment to the latest version
@@ -61,15 +61,24 @@ guards) live in `references/migrations.md`. The fork path lives in
    - **exact match to version V** → the engine is intact and is version V;
    - **matches no manifest** → some engine file differs from every release →
      it is either hand-edited (a broken contract) or corrupt → treat as
-     MODIFIED (Step U5), do not trust the declared version;
+     MODIFIED (Step U5), do not trust the declared version. One exception:
+     a ≤0.2.0-era folder — `profile.yaml` still carries `weworkremotely:` /
+     `remoteok:` source blocks and the matching engine modules exist — is not
+     hand-edited, it just predates the shipped manifests; route it to
+     `references/transplant.md`, never MODIFIED triage (its extra source files
+     were deliberately REMOVED at 0.3.0 and must not be carried forward);
    - two manifests are byte-identical when a release didn't touch the engine
      (e.g. 0.4.1 ≡ 0.4.2, 0.6.0 ≡ 0.7.0) — matching either is fine, the engine
      is current-enough for that range.
-   Also record the per-surface marker vector for later steps: is
-   `## Company-size rule` present in `rubric.md`? does `profile.yaml` carry the
-   `enrichment:` block? what does the sheet's `E1` read? These say which
-   migrations already landed (a partially-upgraded folder is normal, not an
-   error — see the compatibility rule in the root README).
+   Also record the per-surface marker vector — it drives U2's pending-migration
+   selection: is `## Company-size rule` present in `rubric.md`? does
+   `profile.yaml` carry the `enrichment:` block? what does the sheet's `E1`
+   read? These say which migrations already landed. A partially-upgraded folder
+   is normal, not an error — the engine is deliberately built so surfaces can
+   lag independently: features default OFF when their config block is absent,
+   missing data keys read as their neutral value, and contract surfaces
+   (e.g. the sheet layout) are sentinel-guarded so a lagging surface produces
+   a clean stop, never corruption.
 5. **Target = the installed plugin version** (`assets/ENGINE_VERSION`).
 
 ## Step U1 — Route
@@ -82,12 +91,17 @@ guards) live in `references/migrations.md`. The fork path lives in
 
 ## Step U2 — Compute the migration delta
 
-Read `references/migrations.md`. List every migration entry between the
-deployment's version and the target, **in order**. A deployment several
-versions behind replays them sequentially — the newest plugin ships the whole
-cumulative list, so a direct 0.4.2→current jump needs no intermediate plugin
-installs. Show the user the ordered list of what will be proposed and why,
-before touching anything.
+Read `references/migrations.md`. **Select pending migrations by their
+Preconditions, not by version arithmetic:** for EVERY entry in the cumulative
+list (oldest first), evaluate its Preconditions against the U0.4 marker
+vector; an entry whose preconditions still hold is pending even if the
+engine-hash version says it "should" already have landed. A partially
+upgraded folder — engine refreshed earlier, rubric never ported — is exactly
+this case, and a version-range shortcut would silently skip its rubric
+migrations forever. A deployment several versions behind replays the pending
+entries sequentially — the newest plugin ships the whole cumulative list, so
+a direct 0.4.2→current jump needs no intermediate plugin installs. Show the
+user the ordered pending list with reasons before touching anything.
 
 ## Step U3 — Baseline
 
@@ -109,11 +123,19 @@ slot silently.
 `engine/` is contract-frozen, so it is replaced whole, not patched — but verify
 before clobbering:
 
-- **Intact (matched a manifest in U0.4):** copy-verify-swap. Stage the plugin's
-  `assets/engine/**` + `scripts/get_oauth_token.py` into `engine.new/`,
-  `py_compile` everything + NUL/tail check + run the offline trio against it,
-  then rename `engine/` → `engine_pre_<oldver>/` and `engine.new/` → `engine/`.
-  Two renames, no partial state. Rollback = rename back.
+- **Intact (matched a manifest in U0.4):** copy-verify-swap, engine dir and
+  script separately:
+  1. Stage the plugin's `assets/engine/**` into `engine.new/`; `py_compile`
+     everything + NUL/tail check + run the offline trio against it; then
+     rename `engine/` → `engine_pre_<oldver>/` and `engine.new/` → `engine/`.
+     Two renames, no partial state.
+  2. Back up the working folder's `scripts/get_oauth_token.py` to
+     `scripts/get_oauth_token.py.pre_<oldver>`, then copy the plugin's
+     `assets/scripts/get_oauth_token.py` over it. It is part of the manifest
+     surface but lives OUTSIDE `engine/` — never place it inside `engine/`:
+     that adds a path no manifest lists and every future U0.4 fingerprint
+     would misread the folder as hand-edited.
+  Rollback = rename `engine_pre_<oldver>/` back + restore the script backup.
 - **Corrupt:** replacement IS the fix; log it as the corruption class, proceed.
 - **MODIFIED (matched no manifest):** STOP — never clobber a diff you haven't
   read. Diff each differing file against the plugin's `assets/engine/` copy and
@@ -135,9 +157,13 @@ despite living under `state/` — never touch it.
 
 ## Step U6 — Profile / rubric: three-way, proposal per migration
 
-For each pending migration (U2), base = `assets/profiles/_template_history/<the
-deployment's version>/`. If the deployment is below the oldest shipped snapshot,
-use the floor mapping in `references/migrations.md` (pre-0.5.0 → base 0.4.2).
+For each pending migration (U2), base = the template snapshot from BEFORE that
+migration landed: for the oldest pending entry "→ X", base =
+`assets/profiles/_template_history/<version preceding X>/` — chosen by the
+PENDING list, never by the engine-hash version (an engine refreshed to 0.6.0
+over a never-ported rubric still merges against the pre-0.5.0 base). If that
+predecessor is below the oldest shipped snapshot, use the floor mapping in
+`references/migrations.md` (pre-0.5.0 → base 0.4.2).
 
 **rubric.md — section 3-way by `##` heading** (headings are the frozen merge
 anchors):
@@ -194,15 +220,15 @@ ANOMALOUS → on anomalous, offer the stored rollback.
 
 ## Rollback (per surface)
 
-- **engine/**: rename `engine_pre_<oldver>/` back; restore `ENGINE_VERSION`.
-- **profile.yaml / rubric.md / gate tests**: `Copy-Item` from the `.bak`, then
-  re-run compile + tests (revert added gate-test cases too, or they desync).
+- **engine/**: rename `engine_pre_<oldver>/` back; restore the
+  `scripts/get_oauth_token.py` backup; restore `ENGINE_VERSION`.
+- **profile.yaml / rubric.md / gate tests**: follow triage-calibration Step 8
+  verbatim (`.bak` restore, re-run compile + tests, gate-test desync caveat,
+  and its honest list of what a rollback does NOT undo).
 - **state/**: nothing — upgrades never write it.
 - **sheet**: forward-only after the first A–Q row lands (rolling back would
   shift human data in L/M); before that, delete the inserted column and restore
   the title. Roll code forward, not the sheet back.
-- What rollback never undoes (state honestly): `seen_urls`/`role_seen` entries,
-  rows already written, vacancies dropped under the interim config.
 
 ## DONE criteria
 

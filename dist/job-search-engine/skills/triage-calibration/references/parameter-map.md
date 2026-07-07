@@ -102,10 +102,10 @@ Every gate edit → add test cases first, then green tests (SKILL Step 4).
   agency/staff-aug signal).
 - **Company-size rule** (since 0.5.0) — size bands (11–500 fit, 50–200 sweet
   spot) + giant soft negative `company:giant`. Absent in pre-0.5.0 department
-  rubrics: porting = insert the whole section verbatim **between `## DACH
-  language rule` and `## Score 2 — minimum bar`** + rework Score 4 + extend the
-  soft-negatives line, as ONE lever. (The update-to-latest-version skill does
-  this automatically as its → 0.5.0 migration.)
+  rubrics: port it as ONE lever — the exact anchored three-edit procedure is
+  the `→ 0.5.0` entry in the update-to-latest-version skill's
+  `references/migrations.md`; that skill walks it as proposals requiring the
+  user's approval.
 - **Role-type policy** — the precision backstop; where seniority / adjacent-role
   caps live.
 - **Explicit bias instruction** — recall over precision. Do not delete; it is a
