@@ -27,6 +27,12 @@ setup and stays in your own working folder — this plugin ships no private data
   live-verifies boards worth adding for a role, and reports each board's
   integration path (query tweak, RSS, API, vendor) without touching your
   config.
+- **update-to-latest-version** — say "обнови пайплайн" / "update the pipeline"
+  after installing a newer plugin. Fingerprints your deployment, replaces the
+  shared `engine/` after verifying it against its version's manifest, and
+  three-way-merges profile/rubric changes (deployed file vs your version's
+  template vs the new template) so your customizations survive — every change
+  is proposed with a plain-language reason before it is applied.
 
 ## How it works (two phases, daily)
 

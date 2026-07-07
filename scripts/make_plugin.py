@@ -26,6 +26,7 @@ oauth files, or state/ leak into staging.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -48,12 +49,38 @@ FORBIDDEN = [
     "ixdf.org", "remotejobs.org",            # curated blocklist entries (dept state)
 ]
 
-TEXT_SUFFIXES = {".md", ".py", ".yaml", ".yml", ".json", ".ps1", ".txt", ".gitignore", ""}
+# .sha256 included so the privacy guard scans the shipped engine manifests too
+# (hex digests + shipped-file paths can never contain a FORBIDDEN token, but
+# scanning is free insurance).
+TEXT_SUFFIXES = {".md", ".py", ".yaml", ".yml", ".json", ".ps1", ".txt", ".gitignore", ".sha256", ""}
+
+# Files that constitute "the engine" — the contract-frozen surface a working
+# folder gets and that the update-to-latest-version skill replaces wholesale.
+# The per-version manifest hashes exactly these so an upgrade can tell an intact
+# copy from a hand-edited/corrupt one. Paths are working-folder-relative.
+MANIFEST_GLOBS = ("engine/**", "scripts/get_oauth_token.py")
 
 
 def _copy(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
+
+
+def _engine_manifest(staging: Path) -> str:
+    """SHA-256 (LF-normalized) of every engine file staged under assets/, keyed
+    by working-folder-relative path, sorted. Matches the historical manifests
+    backfilled into repo/manifests/ (which were generated LF-normalized)."""
+    entries = {}
+    for asset_rel in ("engine", "scripts/get_oauth_token.py"):
+        base = staging / "assets" / asset_rel
+        files = [base] if base.is_file() else \
+            [p for p in base.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
+        for p in files:
+            rel = p.relative_to(staging / "assets").as_posix()
+            data = p.read_bytes().replace(b"\r\n", b"\n")
+            entries[rel] = hashlib.sha256(data).hexdigest()
+    # Sorted by path (matches the backfilled historical manifests).
+    return "".join(f"{entries[rel]}  {rel}\n" for rel in sorted(entries))
 
 
 def stage(staging: Path) -> None:
@@ -81,8 +108,20 @@ def stage(staging: Path) -> None:
     for src in (REPO / "profiles/_template").rglob("*"):
         if src.is_file():
             _copy(src, staging / "assets/profiles/_template" / src.relative_to(REPO / "profiles/_template"))
+    # Past-version template snapshots — the 3-way-merge base for the
+    # update-to-latest-version skill (base = template at the deployment's version).
+    hist = REPO / "profiles/_template_history"
+    if hist.is_dir():
+        for src in hist.rglob("*"):
+            if src.is_file():
+                _copy(src, staging / "assets/profiles/_template_history" / src.relative_to(hist))
     for src in sorted((REPO / "tests").glob("*.py")):
         _copy(src, staging / "assets/tests" / src.name)
+    # Per-version engine manifests (drift detection for in-place upgrades).
+    mans = REPO / "manifests"
+    if mans.is_dir():
+        for src in sorted(mans.glob("*.sha256")):
+            _copy(src, staging / "assets/manifests" / src.name)
     _copy(REPO / "requirements.txt", staging / "assets/requirements.txt")
     _copy(REPO / ".gitignore", staging / "assets/.gitignore")
     _copy(REPO / "plugin/assets-extra/README.md", staging / "assets/README.md")
@@ -91,6 +130,17 @@ def stage(staging: Path) -> None:
     (staging / "assets/ENGINE_VERSION").write_text(
         f"{version} ({date.today().isoformat()})\n", encoding="utf-8", newline="\n"
     )
+    # Generate this version's engine manifest into the shipped set, and if a
+    # committed copy exists, verify it is in sync (release discipline: bump the
+    # committed manifest whenever engine files change).
+    current = _engine_manifest(staging)
+    (staging / f"assets/manifests/{version}.sha256").write_text(
+        current, encoding="utf-8", newline="\n")
+    committed = REPO / "manifests" / f"{version}.sha256"
+    if committed.exists() and committed.read_text(encoding="utf-8") != current:
+        raise SystemExit(
+            f"manifests/{version}.sha256 is stale — engine files changed but the "
+            f"committed manifest wasn't regenerated. Update it and commit.")
 
 
 def privacy_guard(staging: Path) -> list[str]:
@@ -105,7 +155,7 @@ def privacy_guard(staging: Path) -> list[str]:
             problems.append(f"secret file staged: {rel}")
         if "/state/" in rel.replace("\\", "/"):
             problems.append(f"state dir staged: {rel}")
-        if re.search(r"assets/profiles/(?!_template)", rel.replace("\\", "/")):
+        if re.search(r"assets/profiles/(?!_template(?:_history)?/)", rel.replace("\\", "/")):
             problems.append(f"non-template profile staged: {rel}")
         # Content leaks
         if f.suffix.lower() in TEXT_SUFFIXES:

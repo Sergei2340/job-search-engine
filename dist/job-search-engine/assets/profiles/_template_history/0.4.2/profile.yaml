@@ -1,0 +1,88 @@
+# =============================================================================
+# TEMPLATE department profile. Copy this folder to profiles/<dept>/ and fill in
+# every <...> placeholder. The setup-search-engine skill ("set up the jobs
+# pipeline") walks through this end-to-end. Example values below sketch a Python
+# department.
+# =============================================================================
+
+dept: <dept>                      # e.g. python
+display_name: "<Human-readable department name>"   # e.g. "Python Development"
+
+# Lead ID prefix in sheet column A — UNIQUE per department (PY, NODE, QA, ...).
+id_prefix: <PREFIX>
+
+sheet:
+  name: "<Sheet title>"           # e.g. "Python Jobs Automated Search"
+  spreadsheet_id: "<spreadsheet id from the sheet URL>"
+  tab: "Sheet1"                   # header in row 1, data from row 2, columns A-P
+
+alert_email: "<who gets the blocked-write alert>"
+
+candidate_cap: 100                # max candidates per run passed to Phase 2 (LLM cost guard)
+max_age_hours: 24
+role_seen_window_days: 30
+
+# Informational. Pick a slot that does NOT overlap other departments:
+# BRIGHTDATA_API_KEY and the Google account are shared, so runs are staggered
+# a full hour apart (07:00, 08:00, 09:00, ...).
+schedule:
+  phase1: "<HH:00 Europe/Warsaw (Windows Task Scheduler)>"
+  phase2: "<Cowork task '<dept>-jobs-pipeline', HH:30 — >=30 min after Phase 1>"
+
+sources:
+  serpapi:
+    enabled: true
+    # Max 8 queries/day on the 250 req/month tariff. OWN SERPAPI_KEY required
+    # (per-department budget) — put it in profiles/<dept>/.env.
+    date_posted_chip: "date_posted:3days"
+    queries:
+      - {q: "<Role> remote"}                                   # e.g. "Python Developer remote"
+      - {q: "<Role>", location: "United Kingdom", gl: "gb"}
+
+  linkedin_brightdata:
+    enabled: true
+    time_range: "Past 24 hours"     # the only effective volume cap; billed per record
+    run_once_per_day: true
+    inputs:                          # keyword x geo pairs; keep lean (cost lever)
+      - {keyword: "<Role>", location: "United States", country: "US"}
+      - {keyword: "<Role>", location: "United Kingdom", country: "GB"}
+
+filters:
+  # Companies that must never be a lead (e.g. a platform vendor whose own
+  # postings shouldn't become leads; most departments leave this empty).
+  excluded_companies: []
+  # Optional extensions of engine defaults:
+  # extra_title_noise_tokens: []
+  # extra_unreliable_date_domains: []
+  # extra_serpapi_excluded_hosts: []
+
+# -----------------------------------------------------------------------------
+# Relevance gate — Phase-1 precision backstop (engine/relevance.py).
+# Decision order: deny_titles -> disambiguate -> allow_titles -> weak_titles ->
+# default deny. Regexes are case-insensitive; use single quotes in YAML.
+# Recall over precision: deny only what CANNOT be in scope — borderline cases
+# must pass to Phase 2 scoring. Test with: python -m tests.test_gate_<dept>
+# -----------------------------------------------------------------------------
+relevance_gate:
+  # 1) Titles that are NEVER in scope (checked first, wins outright).
+  deny_titles:
+    - '\b<adjacent-but-wrong role>\b'      # e.g. '\bdata\s+scientist\b' for a Python dept
+  # 2) Ambiguous titles needing body context (delete if none).
+  #    Reject only if reject_context hits the body AND accept_context is absent.
+  disambiguate: []
+  #  - title: '\b<ambiguous title>\b'
+  #    accept_context: '\b(<in-scope signals>)\b'
+  #    reject_context: '\b(<out-of-scope signals>)\b'
+  #    accept_reason: "<why accepted>"
+  #    reject_reason: "<why rejected>"
+  # 3) Titles that are clearly in scope.
+  allow_titles:
+    - '\b<role title regex>\b'             # e.g. '\bpython\s+(developer|engineer)\b'
+  allow_reason: "in-scope title"
+  # 4) Weak/generic titles that need a supporting signal in title or body.
+  weak_titles:
+    - title: '\b<generic title>\b'          # e.g. '\b(software|backend)\s+engineer\b'
+      accept_context: '\b(<tech signals>)\b'   # e.g. '\b(python|django|fastapi|flask)\b'
+      accept_reason: "generic title with in-scope tech context"
+      reject_reason: "generic title without in-scope tech context"
+  default_reason: "no in-scope role signal in title"

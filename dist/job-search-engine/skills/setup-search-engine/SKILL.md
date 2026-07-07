@@ -30,9 +30,12 @@ lives in THEIR working folder — nothing private ships with this plugin.
    directories up from this SKILL.md, then `assets/`) into the working folder:
    `engine/`, `scripts/`, `profiles/_template/`, `requirements.txt`,
    `.gitignore`, `README.md`. Do not overwrite an existing profile if re-running.
-3. Record the engine version from `assets/ENGINE_VERSION` into the working
-   folder (used later by plugin updates: newer plugin → offer to re-copy
-   `engine/` only, never `profiles/`).
+3. Copy `assets/ENGINE_VERSION` verbatim to `<working folder>/ENGINE_VERSION`.
+   This is the version marker later reads rely on: when a newer plugin is
+   installed, run the **update-to-latest-version** skill — it fingerprints the
+   deployment, replaces `engine/` after verifying it against its version's
+   manifest, and three-way-merges profile/rubric changes so customizations are
+   preserved. Never blindly re-copy `profiles/`.
 
 ## Step 1 — Environment audit
 

@@ -15,7 +15,11 @@ symptom below. Never print API keys or OAuth contents while diagnosing.
 This skill fixes a **broken or failed** run. For chronic tuning of a *working*
 pipeline — decomposing how the sorting works, loosening/tightening the gate,
 adjusting the rubric or filters, "мало лидов" / "много мусора" as an ongoing
-complaint rather than a sudden drop — use the `triage-calibration` skill.
+complaint rather than a sudden drop — use the `triage-calibration` skill. If the
+trouble started **right after a plugin update** (mixed-version state — e.g. a
+newer `engine/` against an un-migrated profile or sheet), the deployment was
+likely upgraded incompletely: run the `update-to-latest-version` skill, whose U0
+fingerprint reports exactly which surfaces are behind.
 
 ## No candidates.json / stale `run_at`
 
